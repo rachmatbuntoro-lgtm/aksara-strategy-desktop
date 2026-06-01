@@ -20,11 +20,11 @@ jobs:
 
       - name: Install UI deps
         working-directory: ui
-        run: npm install
+        run: rm -f package-lock.json && npm install
 
       - name: Build UI
         working-directory: ui
-        run: npm run build
+        run: npx vite build
 
       - name: Build Electron Mac
         run: npx electron-builder --mac --arm64 --x64
@@ -57,11 +57,11 @@ jobs:
 
       - name: Install UI deps
         working-directory: ui
-        run: npm install
+        run: Remove-Item -Force package-lock.json -ErrorAction SilentlyContinue; npm install
 
       - name: Build UI
         working-directory: ui
-        run: npm run build
+        run: npx vite build
 
       - name: Build Electron Windows
         run: npx electron-builder --win
