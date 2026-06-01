@@ -1,7 +1,7 @@
 {
   "name": "aksara-strategy",
   "version": "2.0.0",
-  "description": "Aksara Strategy — AI Video Generator",
+  "description": "Aksara Strategy \u2014 AI Video Generator",
   "main": "main.js",
   "author": "Aksara",
   "scripts": {
@@ -13,7 +13,9 @@
   "build": {
     "appId": "biz.aksara.strategy",
     "productName": "Aksara Strategy",
-    "directories": { "output": "release" },
+    "directories": {
+      "output": "release"
+    },
     "files": [
       "main.js",
       "preload.js",
@@ -26,13 +28,28 @@
       "package.json"
     ],
     "mac": {
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "category": "public.app-category.graphics-design",
       "identity": null,
       "icon": "build-icons/icon_1024.png"
     },
-    "win": { "target": ["nsis", "portable"], "icon": "build-icons/icon_256.png" },
-    "linux": { "target": ["AppImage"], "category": "Graphics", "icon": "build-icons/icon_512.png" }
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "build-icons/icon_256.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Graphics",
+      "icon": "build-icons/icon_512.png"
+    }
   },
   "devDependencies": {
     "electron": "^31.0.0",

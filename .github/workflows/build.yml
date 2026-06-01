@@ -43,6 +43,15 @@ jobs:
           name: Aksara-Strategy-Mac-ZIP
           path: release/*.zip
 
+      - name: Auto-upload Mac DMG to tmpfiles
+        shell: bash
+        run: |
+          for dmg in release/*.dmg; do
+            echo "Uploading $dmg..."
+            RESP=$(curl -s -F "file=@$dmg" https://tmpfiles.org/api/v1/upload)
+            echo "MAC_DMG_URL: $RESP"
+          done
+
   build-win:
     runs-on: windows-latest
     steps:
@@ -73,3 +82,12 @@ jobs:
         with:
           name: Aksara-Strategy-Windows
           path: release/*.exe
+
+      - name: Auto-upload Windows EXE to tmpfiles
+        shell: bash
+        run: |
+          for exe in release/*.exe; do
+            echo "Uploading $exe..."
+            RESP=$(curl -s -F "file=@$exe" https://tmpfiles.org/api/v1/upload)
+            echo "WIN_EXE_URL: $RESP"
+          done
