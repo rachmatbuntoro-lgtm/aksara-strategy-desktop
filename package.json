@@ -1,0 +1,43 @@
+{
+  "name": "aksara-strategy",
+  "version": "2.0.0",
+  "description": "Aksara Strategy — AI Video Generator",
+  "main": "main.js",
+  "author": "Aksara",
+  "scripts": {
+    "start": "electron .",
+    "dist:mac": "electron-builder --mac --x64 --arm64",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux"
+  },
+  "build": {
+    "appId": "biz.aksara.strategy",
+    "productName": "Aksara Strategy",
+    "directories": { "output": "release" },
+    "files": [
+      "main.js",
+      "preload.js",
+      "leo-engine.js",
+      "account-manager.js",
+      "job-queue.js",
+      "signup-engine.js",
+      "renderer/**/*",
+      "ui/dist/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "target": ["dmg", "zip"],
+      "category": "public.app-category.graphics-design",
+      "identity": null
+    },
+    "win": { "target": ["nsis", "portable"] },
+    "linux": { "target": ["AppImage"], "category": "Graphics" }
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0"
+  }
+}

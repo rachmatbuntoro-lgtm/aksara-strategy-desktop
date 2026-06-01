@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; media-src 'self' file: https://cdn.leonardo.ai">
+<title>WebKita</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system,Segoe UI,Roboto,sans-serif; }
+  body { background:#0E0B16; color:#fff; height:100vh; overflow:hidden; }
+  .screen { display:none; flex-direction:column; height:100vh; padding:26px 24px; overflow-y:auto; }
+  .screen.active { display:flex; }
+  .center { justify-content:center; align-items:center; text-align:center; }
+  h1 { color:#C9A6FF; font-size:34px; }
+  .sub { color:#8A7FB0; font-size:14px; margin-bottom:30px; }
+  input, textarea, select { width:100%; background:#1B1530; border:1px solid #332A4D; border-radius:14px;
+    padding:14px; color:#fff; font-size:15px; outline:none; }
+  input::placeholder, textarea::placeholder { color:#6A6285; }
+  textarea { height:90px; resize:none; }
+  .btn { width:100%; background:#7B3FE4; border:none; border-radius:14px; padding:15px;
+    color:#fff; font-size:16px; font-weight:600; cursor:pointer; margin-top:16px; }
+  .btn:hover { background:#8B4FF4; }
+  .btn:disabled { opacity:.5; cursor:default; }
+  .ghost { background:transparent; color:#6A6285; margin-top:14px; border:1px solid #332A4D; }
+  .hint { color:#6A6285; font-size:12px; margin-top:18px; line-height:1.5; }
+  .label { color:#fff; font-size:13px; margin:16px 0 7px; font-weight:500; }
+  .row { display:flex; gap:8px; }
+  .chip { flex:1; background:#1B1530; border:1px solid #332A4D; border-radius:11px;
+    padding:11px; text-align:center; cursor:pointer; font-size:13px; }
+  .chip.sel { border-color:#7B3FE4; background:#241a3d; color:#C9A6FF; }
+  .uprow { display:flex; gap:8px; }
+  .upbox { flex:1; }
+  .upbox .label { margin-top:0; }
+  .filebtn { background:#1B1530; border:1px dashed #4a3f6d; border-radius:11px; padding:12px 8px;
+    text-align:center; font-size:12px; color:#8A7FB0; cursor:pointer; }
+  .filebtn.has { border-style:solid; border-color:#7B3FE4; color:#C9A6FF; }
+  .spinner { width:42px; height:42px; border:4px solid #332A4D; border-top-color:#C9A6FF;
+    border-radius:50%; animation:spin 1s linear infinite; margin-bottom:20px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  #log, #genlog { width:100%; height:170px; background:#120d22; border:1px solid #332A4D; border-radius:12px;
+    padding:12px; margin-top:18px; overflow-y:auto; font-family:monospace; font-size:11px;
+    color:#9DECCB; white-space:pre-wrap; text-align:left; }
+  .acct { color:#6A6285; font-size:11px; margin:4px 0 10px; word-break:break-all; }
+  video { width:100%; border-radius:14px; margin-top:10px; background:#000; }
+  .ok { color:#9DECCB; font-size:15px; margin:8px 0; }
+</style>
+</head>
+<body>
+  <!-- LICENSE -->
+  <div id="s-license" class="screen center active">
+    <h1>WebKita</h1>
+    <div class="sub">AI Video Generator</div>
+    <input id="license" placeholder="Masukkan License Key" style="text-transform:uppercase" autofocus>
+    <button id="btn-activate" class="btn">Aktifkan</button>
+    <div class="hint">Sekali aktivasi. Akun dibuat otomatis pakai koneksi internet laptop kamu.</div>
+  </div>
+
+  <!-- CONNECTING -->
+  <div id="s-connecting" class="screen center">
+    <div class="spinner"></div>
+    <div style="font-size:18px">Menyiapkan akun kamu...</div>
+    <div class="sub" style="margin-top:6px">Jangan tutup app. Ini cuma sekali.</div>
+    <div id="log"></div>
+  </div>
+
+  <!-- GENERATE -->
+  <div id="s-generate" class="screen">
+    <h1 style="font-size:24px">Generate Video</h1>
+    <div id="acct" class="acct"></div>
+
+    <div class="label">Model</div>
+    <div class="row" id="models">
+      <div class="chip sel" data-m="veo-3.1-fast">VEO 3.1</div>
+      <div class="chip" data-m="seedance-2.0-fast">Seedance</div>
+      <div class="chip" data-m="kling-3.0">Kling</div>
+    </div>
+
+    <div class="label">Durasi</div>
+    <div class="row" id="durations"></div>
+
+    <div class="label">Rasio</div>
+    <div class="row" id="ratios">
+      <div class="chip sel" data-r="9:16">9:16 (Potret)</div>
+      <div class="chip" data-r="16:9">16:9 (Lanskap)</div>
+    </div>
+
+    <div class="label">Gambar (opsional)</div>
+    <div class="uprow" id="frames"></div>
+
+    <div class="label">Prompt</div>
+    <textarea id="prompt" placeholder="Tulis prompt video..."></textarea>
+
+    <button id="btn-generate" class="btn">Generate Video</button>
+    <button id="btn-capture" class="btn ghost" style="border-color:#7c5cff;color:#b9a6ff">🔴 Rekam API (untuk dev)</button>
+    <button id="btn-reset" class="btn ghost">Reset / Ganti License</button>
+  </div>
+
+  <!-- PROCESSING -->
+  <div id="s-processing" class="screen center">
+    <div class="spinner"></div>
+    <div style="font-size:18px">Memproses video...</div>
+    <div class="sub" style="margin-top:6px">Tunggu sebentar, lagi dibikin.</div>
+    <div id="genlog"></div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="s-result" class="screen center">
+    <div class="ok">✓ Video selesai!</div>
+    <video id="result-video" controls autoplay loop></video>
+    <button id="btn-save" class="btn">Simpan ke Perangkat</button>
+    <button id="btn-again" class="btn ghost">Buat Lagi</button>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
