@@ -145,6 +145,10 @@ const accounts = new AccountManager(store, signupForSlot, refreshSession);
 jobQueue = new JobQueue(store, accounts, log);
 jobQueue.on('update', (jobs) => {
   if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send('jobs', jobs);
+  // Check deferred logout after job finishes
+  if (_licenseExpired && !jobs.some(j => j.status === 'queued' || j.status === 'processing')) {
+    doLogout(_licenseExpiredMsg || 'License expired.');
+  }
 });
 
 // ---- IPC ----
@@ -471,17 +475,56 @@ ipcMain.handle('capture', async () => {
 });
 
 // ---- License auto-check ----
+let _licenseExpired = false;
+
+function hasActiveJobs() {
+  if (!jobQueue) return false;
+  return jobQueue.list().some(j => j.status === 'queued' || j.status === 'processing');
+}
+
+function deferredLogout(msg) {
+  if (hasActiveJobs()) {
+    log('[license] Expired tapi ada job aktif — logout setelah selesai.');
+    _licenseExpired = true;
+    _licenseExpiredMsg = msg;
+    return;
+  }
+  doLogout(msg);
+}
+
+let _licenseExpiredMsg = '';
+
+function doLogout(msg) {
+  _licenseExpired = false;
+  log('[license] Force logout: ' + msg);
+  store.clear();
+  if (mainWin && !mainWin.isDestroyed()) {
+    mainWin.webContents.send('session-expired', msg);
+  }
+}
+
+// Called after every job finishes — check if we deferred a logout
+function checkDeferredLogout() {
+  if (_licenseExpired && !hasActiveJobs()) {
+    doLogout(_licenseExpiredMsg || 'License expired.');
+  }
+}
+
+// Hook into job queue updates to catch job completion
+function hookJobQueueForLogout() {
+  if (!jobQueue) return;
+  jobQueue.on('update', () => {
+    if (_licenseExpired) checkDeferredLogout();
+  });
+}
+
 function checkLicenseExpiry() {
   const expiresAt = store.get('license_expires');
   if (!expiresAt) return true; // no expiry set = unlimited
   const now = new Date();
   const exp = new Date(expiresAt);
   if (now > exp) {
-    log('[license] EXPIRED! Force logout.');
-    store.clear();
-    if (mainWin && !mainWin.isDestroyed()) {
-      mainWin.webContents.send('session-expired', 'License telah expired. Silakan perpanjang.');
-    }
+    deferredLogout('License telah expired. Silakan perpanjang.');
     return false;
   }
   // Warn if expiring within 3 days
@@ -505,11 +548,7 @@ async function revalidateLicense() {
       device_label: 'WebKita Desktop',
     });
     if (!v.ok) {
-      log('[license] Server says invalid: ' + (v.error || 'unknown'));
-      store.clear();
-      if (mainWin && !mainWin.isDestroyed()) {
-        mainWin.webContents.send('session-expired', v.error || 'License tidak valid.');
-      }
+      deferredLogout(v.error || 'License tidak valid.');
       return;
     }
     // Update expiry if server gives new one
