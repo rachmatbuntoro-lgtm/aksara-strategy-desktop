@@ -364,7 +364,7 @@ function UploadCard({ title, subtitle, value, onChange, onClear }) {
   };
 
   return (
-    <div className="relative min-h-[140px] flex-1 overflow-hidden rounded-[26px] border border-dashed border-white/20 bg-black/20 transition hover:bg-white/[.04] hover:border-white/30 active:scale-[.98]">
+    <div className="relative aspect-square overflow-hidden rounded-[26px] border border-dashed border-white/20 bg-black/20 transition hover:bg-white/[.04] hover:border-white/30 active:scale-[.98]">
       <input id={inputId} type="file" accept="image/*" onChange={handleFile} className="hidden" />
       {value ? (
         <>
@@ -386,7 +386,7 @@ function UploadCard({ title, subtitle, value, onChange, onClear }) {
           </button>
         </>
       ) : (
-        <label htmlFor={inputId} className="flex min-h-[140px] h-full cursor-pointer flex-col items-center justify-center p-5 text-center group">
+        <label htmlFor={inputId} className="flex aspect-square cursor-pointer flex-col items-center justify-center p-5 text-center group">
           <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white/[.05] border border-white/5 group-hover:bg-white/10 transition-colors">
             <Upload size={20} style={{ color: BRAND.accent }} />
           </div>
@@ -538,7 +538,26 @@ function StudioPage({ activeTool, setActiveTool, go, studioData, setStudioData, 
   const [busy, setBusy] = useState(false);
   const [errMsg, setErrMsg] = useState("");
 
-  const MODEL_ID = { veo: "veo-3.1-fast", seedance: "seedance-2.0-fast", kling: "kling-3.0" };
+  const MODEL_ID = { veo: "veo-3.1-fast", seedance: "seedance-2.0", kling: "kling-3.0" };
+
+  // Persist prompt & images when switching models
+  const switchModel = (newToolId) => {
+    if (newToolId === activeTool) return;
+    const src = studioData[activeTool];
+    const dst = studioData[newToolId];
+    // Copy prompt & startFrame if destination is empty
+    setStudioData((prev) => ({
+      ...prev,
+      [newToolId]: {
+        ...prev[newToolId],
+        prompt: dst.prompt || src.prompt,
+        startFrame: dst.startFrame || src.startFrame,
+        endFrame: dst.endFrame || src.endFrame,
+        omniRefs: dst.omniRefs.some(Boolean) ? dst.omniRefs : src.omniRefs,
+      },
+    }));
+    setActiveTool(newToolId);
+  };
 
   const updateField = (field, value) => {
     setStudioData((prev) => ({ ...prev, [tool.id]: { ...prev[tool.id], [field]: value } }));
@@ -595,7 +614,7 @@ function StudioPage({ activeTool, setActiveTool, go, studioData, setStudioData, 
         
         {/* Left Column: Engine, Prompt, Settings */}
         <div className="lg:col-span-7 space-y-6">
-          <ModelDropdown activeTool={tool.id} setActiveTool={setActiveTool} />
+          <ModelDropdown activeTool={tool.id} setActiveTool={switchModel} />
 
           <div className="space-y-3">
             <div className="flex items-center justify-between pl-1">
