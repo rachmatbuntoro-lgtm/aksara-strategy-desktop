@@ -107,8 +107,41 @@ function PrimaryButton({ children, onClick, icon: Icon = ArrowRight, disabled = 
   );
 }
 
-function Sidebar({ active, go, jobs = [], logout }) {
+function Sidebar({ active, go, jobs = [], logout, account }) {
   const pending = jobs.filter((j) => j.status === "processing" || j.status === "queued" || j.status === "failed").length;
+  const [now, setNow] = useState(Date.now());
+
+  // Global tick — runs on every screen
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const expiresAt = account?.expiresAt ? new Date(account.expiresAt).getTime() : null;
+  const isExpired = expiresAt ? now >= expiresAt : false;
+  const remaining = expiresAt ? Math.max(0, expiresAt - now) : null;
+  const isUrgent = remaining !== null && remaining < 86400000;
+  const isWarning = remaining !== null && remaining < 259200000;
+
+  // Global auto-logout when countdown hits 0
+  useEffect(() => {
+    if (isExpired && window.webkita) {
+      window.webkita.reset().then(() => window.location.reload());
+    }
+  }, [isExpired]);
+
+  const formatCompact = (ms) => {
+    if (ms == null) return null;
+    const totalSec = Math.floor(ms / 1000);
+    const d = Math.floor(totalSec / 86400);
+    const h = Math.floor((totalSec % 86400) / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (d > 0) return `${d}d ${h}j ${m}m`;
+    if (h > 0) return `${h}j ${m}m ${s}s`;
+    return `${m}m ${s}s`;
+  };
+
   const items = [
     { id: "home", label: "Dashboard", icon: HomeIcon },
     { id: "studio", label: "AI Studio", icon: Layers3 },
@@ -148,6 +181,26 @@ function Sidebar({ active, go, jobs = [], logout }) {
         })}
       </div>
 
+      {/* License Countdown — always visible */}
+      {expiresAt && (
+        <div className={`mx-4 mb-3 rounded-2xl border p-3 ${isUrgent ? 'border-red-400/30 bg-red-400/[.08]' : isWarning ? 'border-yellow-400/30 bg-yellow-400/[.05]' : 'border-white/5 bg-white/[.02]'}`}>
+          <div className="flex items-center gap-2 mb-1.5">
+            <Clock3 size={13} className={isUrgent ? 'text-red-400' : isWarning ? 'text-yellow-400' : 'text-white/40'} />
+            <span className="text-[10px] font-semibold tracking-wide text-white/40 uppercase">License</span>
+          </div>
+          {isExpired ? (
+            <div className="text-sm font-bold text-red-400 animate-pulse">EXPIRED</div>
+          ) : (
+            <div className={`text-base font-bold tabular-nums tracking-wide ${isUrgent ? 'text-red-300' : isWarning ? 'text-yellow-300' : 'text-white/80'}`}>
+              {formatCompact(remaining)}
+            </div>
+          )}
+          {isUrgent && !isExpired && (
+            <div className="text-[10px] text-red-300/60 mt-1">Segera perpanjang!</div>
+          )}
+        </div>
+      )}
+
       <div className="p-4 border-t border-white/10 m-4 rounded-3xl bg-white/[.02]">
         <button
           onClick={logout}
@@ -161,7 +214,7 @@ function Sidebar({ active, go, jobs = [], logout }) {
   )
 }
 
-function DesktopLayout({ screen, go, children, jobs = [], logout }) {
+function DesktopLayout({ screen, go, children, jobs = [], logout, account }) {
   const isAuth = ["home", "studio", "storyboard", "queue", "account"].includes(screen);
 
   return (
@@ -182,7 +235,7 @@ function DesktopLayout({ screen, go, children, jobs = [], logout }) {
 
       {isAuth && (
         <div className="relative z-20 flex-shrink-0">
-           <Sidebar active={screen} go={go} jobs={jobs} logout={logout} />
+           <Sidebar active={screen} go={go} jobs={jobs} logout={logout} account={account} />
         </div>
       )}
 
@@ -1248,13 +1301,6 @@ function AccountPage({ go, account, logout, logs }) {
   const isExpired = expiresAt ? now >= expiresAt : false;
   const remaining = expiresAt ? Math.max(0, expiresAt - now) : null;
 
-  // Auto-logout when countdown hits 0
-  useEffect(() => {
-    if (isExpired && window.webkita) {
-      window.webkita.reset().then(() => window.location.reload());
-    }
-  }, [isExpired]);
-
   const formatRemaining = (ms) => {
     if (ms == null) return null;
     const totalSec = Math.floor(ms / 1000);
@@ -1451,7 +1497,7 @@ export default function App() {
   };
 
   return (
-    <DesktopLayout screen={screen} go={goBottomNav} jobs={jobs} logout={logout}>
+    <DesktopLayout screen={screen} go={goBottomNav} jobs={jobs} logout={logout} account={account}>
         {screen === "splash" && <Splash key="splash" go={() => setScreen("license")} />}
         {screen === "license" && <LicensePage key="license" go={doActivate} error={licenseError} />}
         {screen === "validating" && <ValidatingPage key="validating" />}
