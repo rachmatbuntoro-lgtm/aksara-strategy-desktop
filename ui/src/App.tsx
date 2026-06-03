@@ -1235,7 +1235,46 @@ function StoryboardPage({ go, submitStoryboard, studioData, setStudioData, setAc
   );
 }
 
-function AccountPage({ go }) {
+function AccountPage({ go, account, logout, logs }) {
+  const [now, setNow] = useState(Date.now());
+
+  // Tick every second for realtime countdown
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const expiresAt = account?.expiresAt ? new Date(account.expiresAt).getTime() : null;
+  const isExpired = expiresAt ? now >= expiresAt : false;
+  const remaining = expiresAt ? Math.max(0, expiresAt - now) : null;
+
+  // Auto-logout when countdown hits 0
+  useEffect(() => {
+    if (isExpired && window.webkita) {
+      window.webkita.reset().then(() => window.location.reload());
+    }
+  }, [isExpired]);
+
+  const formatRemaining = (ms) => {
+    if (ms == null) return null;
+    const totalSec = Math.floor(ms / 1000);
+    const days = Math.floor(totalSec / 86400);
+    const hours = Math.floor((totalSec % 86400) / 3600);
+    const minutes = Math.floor((totalSec % 3600) / 60);
+    const seconds = totalSec % 60;
+    return { days, hours, minutes, seconds, totalSec };
+  };
+
+  const timeLeft = formatRemaining(remaining);
+  const isUrgent = remaining !== null && remaining < 86400000; // < 1 day
+  const isWarning = remaining !== null && remaining < 259200000; // < 3 days
+
+  const formatExpiryDate = () => {
+    if (!expiresAt) return "Unlimited Access";
+    if (isExpired) return "EXPIRED";
+    return new Date(expiresAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="h-full">
       <div className="flex items-center justify-between mb-8">
@@ -1251,7 +1290,9 @@ function AccountPage({ go }) {
             <User size={40} style={{ color: BRAND.accent }} />
           </div>
           <div>
-            <div className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-300 w-max mb-3">Status Aktif</div>
+            <div className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wide w-max mb-3 ${isExpired ? 'border-red-400/20 bg-red-400/10 text-red-300' : 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300'}`}>
+              {isExpired ? 'Expired' : 'Status Aktif'}
+            </div>
             <h2 className="text-3xl font-semibold tracking-tight">Aksara Strategy Member</h2>
           </div>
         </div>
@@ -1269,16 +1310,53 @@ function AccountPage({ go }) {
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-white/5 bg-black/20 p-6 flex items-center gap-5">
+          <div className={`rounded-[24px] border bg-black/20 p-6 flex items-center gap-5 ${isUrgent ? 'border-red-400/30' : isWarning ? 'border-yellow-400/30' : 'border-white/5'}`}>
             <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white/[.05]">
-              <CalendarClock size={24} style={{ color: BRAND.accent }} />
+              <CalendarClock size={24} style={{ color: isUrgent ? '#f87171' : isWarning ? '#fbbf24' : BRAND.accent }} />
             </div>
             <div>
               <div className="text-xs font-semibold tracking-wide text-white/40 mb-1">MASA AKTIF</div>
-              <div className="text-base font-medium text-white/90">Unlimited Access</div>
+              <div className="text-base font-medium text-white/90">{formatExpiryDate()}</div>
             </div>
           </div>
         </div>
+
+        {/* Realtime Countdown */}
+        {expiresAt && !isExpired && timeLeft && (
+          <div className={`mt-6 rounded-[24px] border p-6 ${isUrgent ? 'border-red-400/30 bg-red-400/[.05]' : isWarning ? 'border-yellow-400/30 bg-yellow-400/[.05]' : 'border-white/5 bg-black/20'}`}>
+            <div className="text-xs font-semibold tracking-wide text-white/40 mb-4">SISA WAKTU LICENSE</div>
+            <div className="flex items-center gap-4 justify-center">
+              {timeLeft.days > 0 && (
+                <div className="text-center">
+                  <div className={`text-4xl font-bold tabular-nums ${isUrgent ? 'text-red-300' : isWarning ? 'text-yellow-300' : 'text-white'}`}>{String(timeLeft.days).padStart(2, '0')}</div>
+                  <div className="text-[10px] text-white/40 mt-1">HARI</div>
+                </div>
+              )}
+              {(timeLeft.days > 0 || timeLeft.hours > 0) && (
+                <>
+                  {timeLeft.days > 0 && <div className={`text-3xl font-light ${isUrgent ? 'text-red-400/40' : 'text-white/20'}`}>:</div>}
+                  <div className="text-center">
+                    <div className={`text-4xl font-bold tabular-nums ${isUrgent ? 'text-red-300' : isWarning ? 'text-yellow-300' : 'text-white'}`}>{String(timeLeft.hours).padStart(2, '0')}</div>
+                    <div className="text-[10px] text-white/40 mt-1">JAM</div>
+                  </div>
+                </>
+              )}
+              <div className={`text-3xl font-light ${isUrgent ? 'text-red-400/40' : 'text-white/20'}`}>:</div>
+              <div className="text-center">
+                <div className={`text-4xl font-bold tabular-nums ${isUrgent ? 'text-red-300' : isWarning ? 'text-yellow-300' : 'text-white'}`}>{String(timeLeft.minutes).padStart(2, '0')}</div>
+                <div className="text-[10px] text-white/40 mt-1">MENIT</div>
+              </div>
+              <div className={`text-3xl font-light ${isUrgent ? 'text-red-400/40' : 'text-white/20'}`}>:</div>
+              <div className="text-center">
+                <div className={`text-4xl font-bold tabular-nums ${isUrgent ? 'text-red-300 animate-pulse' : isWarning ? 'text-yellow-300' : 'text-white'}`}>{String(timeLeft.seconds).padStart(2, '0')}</div>
+                <div className="text-[10px] text-white/40 mt-1">DETIK</div>
+              </div>
+            </div>
+            {isUrgent && (
+              <p className="text-center text-xs text-red-300/70 mt-4">⚠️ License hampir habis! Perpanjang sebelum expired.</p>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   );
@@ -1303,7 +1381,7 @@ export default function App() {
     if (!wk) return; // dev mode without Electron
     wk.getState().then((s) => {
       if (s && s.connected) {
-        setAccount({ email: s.email, uid: s.uid });
+        setAccount({ email: s.email, uid: s.uid, expiresAt: s.expires_at || null });
         setScreen("home");
       }
     });
@@ -1336,7 +1414,7 @@ export default function App() {
     try {
       const r = await wk.activate(key);
       if (r && r.ok !== false) {
-        setAccount({ email: r.email || "member@aksara.id", uid: r.uid || r.userId });
+        setAccount({ email: r.email || "member@aksara.id", uid: r.uid || r.userId, expiresAt: r.expires_at || null });
         setScreen("home");
       } else {
         setLicenseError((r && r.reason) || "License tidak valid");

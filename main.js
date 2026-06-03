@@ -156,6 +156,7 @@ ipcMain.handle('get-state', () => ({
   connected: !!store.get('leo_uid'),
   email: store.get('pool_email') || null,
   uid: store.get('leo_uid') || null,
+  expires_at: store.get('license_expires') || null,
 }));
 
 ipcMain.handle('activate', async (_e, key) => {
@@ -212,6 +213,7 @@ ipcMain.handle('activate', async (_e, key) => {
     log('Akun berhasil dibuat!');
   }
 
+  r.expires_at = v.expires_at || null;
   return r;
 });
 
@@ -568,12 +570,6 @@ app.whenReady().then(() => {
     if (!checkLicenseExpiry()) return;
     revalidateLicense(); // async server check
   }, 5000);
-
-  // Check every hour
-  setInterval(() => {
-    checkLicenseExpiry();
-    revalidateLicense();
-  }, 60 * 60 * 1000);
 
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createMain(); });
 });
