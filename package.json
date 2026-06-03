@@ -37,7 +37,7 @@
     "linux": { "target": ["AppImage"], "category": "Graphics", "icon": "build-icons/icon_512.png" }
   },
   "devDependencies": {
-    "electron": "^31.0.0",
+    "electron": "31.7.7",
     "electron-builder": "^24.13.3"
   },
   "dependencies": {
