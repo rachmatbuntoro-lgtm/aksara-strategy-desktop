@@ -210,13 +210,13 @@ function DesktopLayout({ screen, go, children, jobs = [], logout }) {
 function Splash({ go }) {
   return (
     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center text-center p-8">
-      <div className="mb-10">
-        <Logo className="h-10 mx-auto" />
+      <div className="mb-8">
+        <Logo className="h-7 mx-auto" />
       </div>
-      <h1 className="text-4xl lg:text-5xl font-semibold leading-tight tracking-[-0.04em] max-w-2xl">
+      <h1 className="text-2xl lg:text-3xl font-semibold leading-tight tracking-[-0.04em] max-w-2xl">
         Generate video AI dalam satu control panel.
       </h1>
-      <p className="mt-6 text-base leading-relaxed text-white/58 max-w-xl">
+      <p className="mt-5 text-sm leading-relaxed text-white/58 max-w-xl">
         Akses Veo 3.1, Seedance 2, dan Kling AI dengan workflow yang rapi untuk member Aksara Strategy.
       </p>
       <div className="mt-12 w-full max-w-sm">
