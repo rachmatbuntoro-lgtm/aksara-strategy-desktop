@@ -2,13 +2,21 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const https = require('https');
 const fs = require('fs');
-const Store = require('electron-store');
 const { AccountManager } = require('./account-manager.js');
 const { JobQueue } = require('./job-queue.js');
 const { runSignup, refreshToken, setOtpFetcher } = require('./signup-engine.js');
 const { GeminiEngine, getStoryboardPrompt, VIDEO_PROMPT_LOCKED } = require('./gemini-engine.js');
 
-const store = new Store();
+// Simple JSON store replacement (no external deps)
+const storePath = path.join(app.getPath('userData'), 'config.json');
+let _data = {};
+try { _data = JSON.parse(fs.readFileSync(storePath, 'utf8')); } catch {}
+const store = {
+  get: (key) => _data[key],
+  set: (key, val) => { _data[key] = val; fs.writeFileSync(storePath, JSON.stringify(_data, null, 2)); },
+  clear: () => { _data = {}; fs.writeFileSync(storePath, '{}'); },
+  path: storePath,
+};
 const LICENSE_API = 'aksara-license.fly.dev';
 
 let mainWin = null;

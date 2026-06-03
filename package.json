@@ -25,7 +25,6 @@
       "assets/**/*",
       "renderer/**/*",
       "ui/dist/**/*",
-      "node_modules/**/*",
       "package.json"
     ],
     "mac": {
@@ -42,6 +41,5 @@
     "electron-builder": "^24.13.3"
   },
   "dependencies": {
-    "electron-store": "^6.0.1"
   }
 }
