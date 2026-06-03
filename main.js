@@ -179,6 +179,7 @@ ipcMain.handle('activate', async (_e, key) => {
 
   store.set('license_key', key);
   store.set('canva_invite_url', v.canva_invite_url);
+  store.set('license_expires', v.expires_at || null);
   accounts.setLicense(key, pool);
 
   const entry = pool[0];
@@ -469,9 +470,72 @@ ipcMain.handle('capture', async () => {
   });
 });
 
+// ---- License auto-check ----
+function checkLicenseExpiry() {
+  const expiresAt = store.get('license_expires');
+  if (!expiresAt) return true; // no expiry set = unlimited
+  const now = new Date();
+  const exp = new Date(expiresAt);
+  if (now > exp) {
+    log('[license] EXPIRED! Force logout.');
+    store.clear();
+    if (mainWin && !mainWin.isDestroyed()) {
+      mainWin.webContents.send('session-expired', 'License telah expired. Silakan perpanjang.');
+    }
+    return false;
+  }
+  // Warn if expiring within 3 days
+  const daysLeft = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
+  if (daysLeft <= 3) {
+    log(`[license] Warning: ${daysLeft} hari lagi expired!`);
+    if (mainWin && !mainWin.isDestroyed()) {
+      mainWin.webContents.send('license-warning', `License akan expired dalam ${daysLeft} hari.`);
+    }
+  }
+  return true;
+}
+
+async function revalidateLicense() {
+  const key = store.get('license_key');
+  if (!key) return;
+  try {
+    const v = await apiPost('/api/validate', {
+      key,
+      device_id: deviceId(),
+      device_label: 'WebKita Desktop',
+    });
+    if (!v.ok) {
+      log('[license] Server says invalid: ' + (v.error || 'unknown'));
+      store.clear();
+      if (mainWin && !mainWin.isDestroyed()) {
+        mainWin.webContents.send('session-expired', v.error || 'License tidak valid.');
+      }
+      return;
+    }
+    // Update expiry if server gives new one
+    if (v.expires_at) store.set('license_expires', v.expires_at);
+  } catch (e) {
+    log('[license] Revalidate network error (ignored): ' + e.message);
+    // Network error — rely on local check
+  }
+}
+
 // ---- Lifecycle ----
 app.whenReady().then(() => {
   createMain();
+
+  // Check on startup (after short delay to let UI load)
+  setTimeout(() => {
+    if (!checkLicenseExpiry()) return;
+    revalidateLicense(); // async server check
+  }, 5000);
+
+  // Check every hour
+  setInterval(() => {
+    checkLicenseExpiry();
+    revalidateLicense();
+  }, 60 * 60 * 1000);
+
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createMain(); });
 });
 

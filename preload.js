@@ -14,4 +14,6 @@ contextBridge.exposeInMainWorld('webkita', {
   // live job list pushed from main on every state change
   onJobs: (cb) => ipcRenderer.on('jobs', (_e, jobs) => cb(jobs)),
   onLog: (cb) => ipcRenderer.on('log', (_e, line) => cb(line)),
+  onSessionExpired: (cb) => ipcRenderer.on('session-expired', (_e, msg) => cb(msg)),
+  onLicenseWarning: (cb) => ipcRenderer.on('license-warning', (_e, msg) => cb(msg)),
 });

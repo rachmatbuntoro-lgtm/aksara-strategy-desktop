@@ -1311,6 +1311,17 @@ export default function App() {
     wk.onJobs((updatedJobs) => setJobs(updatedJobs || []));
     wk.onLog((line) => setLogs((prev) => [...prev.slice(-200), line]));
     wk.jobsList().then((list) => { if (list && list.length) setJobs(list); });
+    // Auto-logout on license expiry
+    wk.onSessionExpired((msg) => {
+      setAccount(null);
+      setLicenseError(msg || "License expired.");
+      setScreen("license");
+    });
+    wk.onLicenseWarning((msg) => {
+      setLicenseError(""); // clear any previous error
+      // Show warning banner (reuse toast or license error area)
+      alert(msg); // simple for now, can upgrade to banner later
+    });
   }, []);
 
   const doActivate = async (key) => {
