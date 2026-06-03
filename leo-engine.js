@@ -10,8 +10,8 @@ const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (
 const MODELS = {
   'veo-3.1-fast':      { id: 'veo-3.1-fast-generate-001', modes: ['start_frame','end_frame'],
                          durations: [4,6,8], locked_res: 'RESOLUTION_1080', omni_max: 0, ratios: ['16:9','9:16'] },
-  'seedance-2.0-fast': { id: 'seedance-2.0-fast', modes: ['image_reference','start_frame','end_frame'],
-                         durations: [5,10,15], locked_res: 'RESOLUTION_720', omni_max: 4, ratios: ['16:9','9:16'] },
+  'seedance-2.0':      { id: 'seedance-2.0', modes: ['image_reference','start_frame','end_frame'],
+                         durations: [5,10], locked_res: 'RESOLUTION_720', omni_max: 4, ratios: ['16:9','9:16'] },
   'kling-3.0':         { id: 'kling-3.0', modes: ['start_frame','end_frame'],
                          durations: [5,10,15], locked_res: 'RESOLUTION_1080', omni_max: 0, ratios: ['16:9','9:16'] },
 };
@@ -23,7 +23,7 @@ const RATIO_DIMS = {
 // EXACT token cost per (model,duration) — user-confirmed from Leonardo UI.
 const COST_TABLE = {
   'veo-3.1-fast':      { 4:600, 6:900, 8:1200 },
-  'seedance-2.0-fast': { 5:1209, 10:2419, 15:3628 },
+  'seedance-2.0':      { 5:1209, 10:2419 },
   'kling-3.0':         { 5:840, 10:1680, 15:2520 },
 };
 function estimateCost(model, duration) {

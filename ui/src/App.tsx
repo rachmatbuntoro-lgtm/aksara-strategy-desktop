@@ -56,7 +56,7 @@ const tools = [
     subtitle: "UGC & reference-driven video flow",
     description: "Cocok untuk UGC, gerakan natural, dan penggunaan referensi tambahan sampai 4 gambar.",
     badge: "Omni Ref",
-    durations: ["5s", "10s", "15s"],
+    durations: ["5s", "10s"],
     refs: true,
     icon: Wand2,
   },
