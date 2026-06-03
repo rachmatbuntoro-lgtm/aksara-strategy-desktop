@@ -1414,6 +1414,8 @@ export default function App() {
   const [licenseError, setLicenseError] = useState("");
   const [jobs, setJobs] = useState([]);
   const [account, setAccount] = useState(null);
+  const [maintenance, setMaintenance] = useState(null); // {active, level, message}
+  const [maintDismissed, setMaintDismissed] = useState(false);
   const [logs, setLogs] = useState([]);
   const [studioData, setStudioData] = useState({
     veo:      { startFrame: null, endFrame: null, omniRefs: [null, null, null, null], duration: "4s", ratio: "9:16", prompt: "" },
@@ -1446,6 +1448,20 @@ export default function App() {
       // Show warning banner (reuse toast or license error area)
       alert(msg); // simple for now, can upgrade to banner later
     });
+  }, []);
+
+  // Poll maintenance status every 5 minutes
+  useEffect(() => {
+    const MAINT_URL = "http://43.134.62.172:3100/api/maintenance";
+    const check = () => {
+      fetch(MAINT_URL).then(r => r.json()).then(d => {
+        setMaintenance(d.active ? d : null);
+        if (!d.active) setMaintDismissed(false);
+      }).catch(() => {});
+    };
+    check(); // initial
+    const t = setInterval(check, 5 * 60 * 1000);
+    return () => clearInterval(t);
   }, []);
 
   const doActivate = async (key) => {
@@ -1497,6 +1513,37 @@ export default function App() {
   };
 
   return (
+    <>
+    {/* Maintenance Banner */}
+    {maintenance && maintenance.active && !maintDismissed && screen !== "splash" && screen !== "license" && screen !== "validating" && (
+      <div className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-3 ${
+        maintenance.level === "critical" ? "bg-red-600/95" :
+        maintenance.level === "warning" ? "bg-orange-500/90" : "bg-yellow-500/85"
+      } backdrop-blur-sm`}>
+        <div className="flex items-center gap-3">
+          <span className="text-lg">{maintenance.level === "critical" ? "🚫" : maintenance.level === "warning" ? "⚠️" : "ℹ️"}</span>
+          <div>
+            <span className="font-bold text-sm text-white">Maintenance {maintenance.level.toUpperCase()}</span>
+            <span className="text-sm text-white/90 ml-2">{maintenance.message}</span>
+          </div>
+        </div>
+        {maintenance.level !== "critical" && (
+          <button onClick={() => setMaintDismissed(true)} className="text-white/70 hover:text-white text-xl font-bold px-2">×</button>
+        )}
+      </div>
+    )}
+    
+    {/* Critical maintenance blocks the app */}
+    {maintenance && maintenance.active && maintenance.level === "critical" && screen !== "splash" && screen !== "license" && screen !== "validating" ? (
+      <div className="flex h-screen w-full bg-neutral-950 text-white items-center justify-center">
+        <div className="text-center max-w-md p-8">
+          <div className="text-6xl mb-6">🚫</div>
+          <h1 className="text-2xl font-bold mb-4">Server Maintenance</h1>
+          <p className="text-white/70 mb-6">{maintenance.message}</p>
+          <p className="text-white/40 text-sm">Silakan coba lagi nanti</p>
+        </div>
+      </div>
+    ) : (
     <DesktopLayout screen={screen} go={goBottomNav} jobs={jobs} logout={logout} account={account}>
         {screen === "splash" && <Splash key="splash" go={() => setScreen("license")} />}
         {screen === "license" && <LicensePage key="license" go={doActivate} error={licenseError} />}
@@ -1517,5 +1564,7 @@ export default function App() {
         {screen === "queue" && <QueueResultsPage key="queue" go={goBottomNav} jobs={jobs} generateAgain={() => setScreen("studio")} />}
         {screen === "account" && <AccountPage key="account" go={goBottomNav} account={account} logout={logout} logs={logs} />}
     </DesktopLayout>
+    )}
+    </>
   );
 }
