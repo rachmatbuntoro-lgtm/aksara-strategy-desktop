@@ -25,6 +25,7 @@
       "assets/**/*",
       "renderer/**/*",
       "ui/dist/**/*",
+      "node_modules/**/*",
       "package.json"
     ],
     "mac": {
