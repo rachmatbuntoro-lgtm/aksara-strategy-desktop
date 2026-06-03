@@ -251,6 +251,7 @@ ipcMain.handle('storyboard-generate', async (_e, data) => {
   if (!data.productImg) return { ok: false, reason: 'Gambar produk wajib diisi' };
   if (!data.lokasiImg && !data.bgText) return { ok: false, reason: 'Lokasi/background wajib diisi (upload atau text)' };
 
+  const tmpFiles = [];
   try {
     const gemini = getGemini();
     const path = require('path');
@@ -269,7 +270,6 @@ ipcMain.handle('storyboard-generate', async (_e, data) => {
       return p;
     };
 
-    const tmpFiles = [];
     const productPath = toTmpFile(data.productImg, 'product');
     const modelPath = toTmpFile(data.modelImg, 'model');
     const lokasiPath = toTmpFile(data.lokasiImg, 'lokasi');
