@@ -58,6 +58,17 @@ const Q_FEED = `query GetAIGenerationFeed($where: generations_bool_exp = {}, $li
   }
 }`;
 
+// ---- Image generation (gpt-image-2) ----
+const IMAGE_MODELS = {
+  'gpt-image-2': { id: 'gpt-image-2', ratios: ['16:9', '9:16', '1:1', '2:3'] },
+};
+const IMAGE_COST = { '16:9': 573, '9:16': 573, '1:1': 1033, '2:3': 694 };
+const IMAGE_Q_FEED = `query GetAIGenerationFeed($where: generations_bool_exp = {}, $limit: Int) {
+  generations(limit: $limit, order_by: [{createdAt: desc}], where: $where) {
+    id status createdAt generated_images { id url __typename } __typename
+  }
+}`;
+
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 function subFromToken(token) {
@@ -197,10 +208,47 @@ class LeoEngine {
     }
     throw new Error(lastErr);
   }
+
+  // ---- Image generation (gpt-image-2) ----
+
+  // Generate an image. Returns generationId.
+  async generateImage(prompt, { ratio = '1:1', quality = 'HIGH', promptEnhance = true,
+                                   styleIds = [], publicGen = true, quantity = 1 } = {}) {
+    const spec = IMAGE_MODELS['gpt-image-2'];
+    if (!spec.ratios.includes(ratio)) throw new Error(`gpt-image-2 ratios ${spec.ratios}, got ${ratio}`);
+    const params = {
+      prompt,
+      ratio,
+      quality,
+      promptEnhance,
+      quantity,
+    };
+    if (styleIds.length) params.styleIds = styleIds;
+    const d = await this.gql('Generate', Q_GENERATE, { request: { model: spec.id, public: publicGen, parameters: params } });
+    return d.generate.generationId;
+  }
+
+  // Fetch generated image URL from feed.
+  async getImageUrl(genId, { tries = 20, interval = 3000 } = {}) {
+    let lastErr = 'unknown';
+    for (let i = 0; i < tries; i++) {
+      const d = await this.gql('GetAIGenerationFeed', IMAGE_Q_FEED,
+        { where: { id: { _eq: genId } }, limit: 1 });
+      const gens = d.generations || [];
+      if (!gens.length) { lastErr = 'generation not in feed'; }
+      else {
+        for (const img of (gens[0].generated_images || [])) if (img.url) return img.url;
+        lastErr = 'no image url yet';
+      }
+      await sleep(interval);
+    }
+    throw new Error(lastErr);
+  }
 }
 
 module.exports = {
   GQL, SCHEMA_VERSION, UA, MODELS, RATIO_DIMS, COST_TABLE, estimateCost,
+  IMAGE_MODELS, IMAGE_COST, IMAGE_Q_FEED,
   Q_UPLOAD, Q_MODERATION, Q_GENERATE, Q_TOKENS, Q_STATUS, Q_FEED,
   subFromToken, tokenExp, sleep, LeoEngine,
 };

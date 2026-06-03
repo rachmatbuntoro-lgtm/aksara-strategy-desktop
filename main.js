@@ -6,6 +6,7 @@ const Store = require('electron-store');
 const { AccountManager } = require('./account-manager.js');
 const { JobQueue } = require('./job-queue.js');
 const { runSignup, refreshToken, setOtpFetcher } = require('./signup-engine.js');
+const { GeminiEngine, getStoryboardPrompt, VIDEO_PROMPT_LOCKED } = require('./gemini-engine.js');
 
 const store = new Store();
 const LICENSE_API = 'aksara-license.fly.dev';
@@ -225,6 +226,134 @@ ipcMain.handle('generate', async (_e, job) => {
 ipcMain.handle('jobs-list', () => jobQueue.list());
 ipcMain.handle('job-retry', (_e, id) => { jobQueue.retry(id); return true; });
 ipcMain.handle('job-remove', (_e, id) => { jobQueue.remove(id); return true; });
+
+// ---- Storyboard Generation ----
+let geminiEngine = null;
+
+function getGemini() {
+  if (!geminiEngine) geminiEngine = new GeminiEngine(log);
+  return geminiEngine;
+}
+
+ipcMain.handle('storyboard-generate', async (_e, data) => {
+  // data: { productImg, modelImg, lokasiImg, bgText, category, variation }
+  if (!data.productImg) return { ok: false, reason: 'Gambar produk wajib diisi' };
+  if (!data.lokasiImg && !data.bgText) return { ok: false, reason: 'Lokasi/background wajib diisi (upload atau text)' };
+
+  try {
+    const gemini = getGemini();
+    const path = require('path');
+    const os = require('os');
+
+    // Decode data: URLs to temp files
+    const toTmpFile = (img, name) => {
+      if (!img) return null;
+      const val = typeof img === 'string' ? img : img.url;
+      if (!val || !val.startsWith('data:')) return val;
+      const m = /^data:([^;]+);base64,(.*)$/s.exec(val);
+      if (!m) return null;
+      const ext = (m[1].split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+      const p = path.join(os.tmpdir(), `sb_${name}_${Date.now()}.${ext}`);
+      fs.writeFileSync(p, Buffer.from(m[2], 'base64'));
+      return p;
+    };
+
+    const tmpFiles = [];
+    const productPath = toTmpFile(data.productImg, 'product');
+    const modelPath = toTmpFile(data.modelImg, 'model');
+    const lokasiPath = toTmpFile(data.lokasiImg, 'lokasi');
+    if (productPath) tmpFiles.push(productPath);
+    if (modelPath) tmpFiles.push(modelPath);
+    if (lokasiPath) tmpFiles.push(lokasiPath);
+
+    // Build image paths array: [produk, model, lokasi, layout_ref]
+    const imagePaths = [productPath, modelPath, lokasiPath].filter(Boolean);
+
+    // Always include the storyboard layout reference as Gambar 4
+    const layoutRefPath = path.join(__dirname, 'assets', 'storyboard-layout-ref.png');
+    if (fs.existsSync(layoutRefPath)) imagePaths.push(layoutRefPath);
+
+    // ===== STEP 1: Gemini → storyboard image prompt =====
+    const systemPrompt = getStoryboardPrompt(data.category, data.variation);
+    let finalPrompt = systemPrompt;
+    if (data.bgText) {
+      finalPrompt += `\n\nBackground/Lokasi : ${data.bgText}`;
+    }
+
+    log(`[storyboard] Step 1: Gemini → image prompt (${data.category}/${data.variation})...`);
+    await gemini.init();
+
+    const fileRefs = [];
+    for (const p of imagePaths) {
+      if (!p) continue;
+      const ref = await gemini.uploadFile(p);
+      fileRefs.push(ref);
+    }
+    if (!fileRefs.length) throw new Error('Tidak ada gambar yang berhasil di-upload');
+
+    const storyboardPrompt = await gemini._sendPrompt(finalPrompt, fileRefs);
+    if (!storyboardPrompt || storyboardPrompt.length < 20) {
+      throw new Error('Storyboard prompt terlalu pendek atau kosong');
+    }
+    log(`[storyboard] Step 1 OK: prompt ${storyboardPrompt.length} chars`);
+
+    // ===== STEP 2: Leonardo → generate storyboard image =====
+    log(`[storyboard] Step 2: Leonardo → generate image...`);
+    const imageResult = await accounts.makeImage(
+      { prompt: storyboardPrompt, ratio: '9:16', quality: 'HIGH', promptEnhance: false },
+      (s, i) => {
+        if (s === 'rotate') log(`[storyboard] ${i.reason} — rotasi akun...`);
+        else if (s === 'generating') log(`[storyboard] Generating image slot ${i.slot}...`);
+      }
+    );
+
+    if (!imageResult || !imageResult.url) throw new Error('Leonardo tidak menghasilkan gambar');
+    log(`[storyboard] Step 2 OK: image generated`);
+
+    // Download image to temp file for Gemini analysis
+    const imgResp = await fetch(imageResult.url);
+    const imgBuf = Buffer.from(await imgResp.arrayBuffer());
+    const storyboardImgPath = path.join(os.tmpdir(), `sb_result_${Date.now()}.png`);
+    fs.writeFileSync(storyboardImgPath, imgBuf);
+    tmpFiles.push(storyboardImgPath);
+
+    // ===== STEP 3: Gemini → video prompt (LOCKED) =====
+    log(`[storyboard] Step 3: Gemini → video prompt (locked)...`);
+    const videoFileRef = await gemini.uploadFile(storyboardImgPath);
+    const videoPrompt = await gemini._sendPrompt(VIDEO_PROMPT_LOCKED, [videoFileRef]);
+
+    if (!videoPrompt || videoPrompt.length < 20) {
+      throw new Error('Video prompt terlalu pendek atau kosong');
+    }
+    log(`[storyboard] Step 3 OK: video prompt ${videoPrompt.length} chars`);
+
+    // Cleanup temp files
+    tmpFiles.forEach(p => { try { fs.unlinkSync(p); } catch {} });
+
+    // Add to queue for history tracking
+    jobQueue.addCompleted({
+      model: 'storyboard',
+      engine: 'Storyboard AI',
+      title: (storyboardPrompt || 'Storyboard').trim().split(/\s+/).slice(0, 4).join(' '),
+      prompt: videoPrompt,
+      ratio: '1:1',
+      imageUrl: imageResult.url,
+      storyboardData: { storyboardPrompt, videoPrompt, category: data.category, variation: data.variation },
+    });
+
+    return {
+      ok: true,
+      storyboardPrompt,     // image prompt (for reference)
+      videoPrompt,          // seedance 2 prompt (main output)
+      storyboardImageUrl: imageResult.url,  // the generated storyboard image
+    };
+  } catch (e) {
+    log('[storyboard] FAILED: ' + e.message);
+    // Cleanup temp files on error too
+    tmpFiles.forEach(p => { try { fs.unlinkSync(p); } catch {} });
+    return { ok: false, reason: e.message };
+  }
+});
 
 // ---- CAPTURE MODE ----
 let captureWin = null;

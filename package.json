@@ -21,6 +21,8 @@
       "account-manager.js",
       "job-queue.js",
       "signup-engine.js",
+      "gemini-engine.js",
+      "assets/**/*",
       "renderer/**/*",
       "ui/dist/**/*",
       "package.json"

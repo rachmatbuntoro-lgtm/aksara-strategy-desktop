@@ -80,6 +80,33 @@ class JobQueue extends EventEmitter {
     this._save();
   }
 
+  // Add an already-completed job (for storyboard pipeline results)
+  addCompleted(spec) {
+    const id = 'job_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+    const job = {
+      id,
+      model: spec.model || 'storyboard',
+      engine: spec.engine || 'Storyboard AI',
+      title: spec.title || 'Storyboard',
+      prompt: spec.prompt || '',
+      duration: 0,
+      ratio: spec.ratio || '1:1',
+      inputs: { startFrame: spec.imageUrl || null, endFrame: null, omni: [] },
+      status: 'done',
+      progress: 100,
+      thumb: GRADIENTS[(this._gi++) % GRADIENTS.length],
+      file: null,
+      url: spec.imageUrl || null,
+      reason: null,
+      createdAt: Date.now(),
+      doneAt: Date.now(),
+      storyboardData: spec.storyboardData || null, // extra metadata
+    };
+    this.jobs.unshift(job);
+    this._save();
+    return id;
+  }
+
   // start as many queued jobs as the concurrency budget allows
   _pump() {
     while (this.running < MAX_CONCURRENT) {

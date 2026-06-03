@@ -4,7 +4,7 @@
 // ever shows "processing" — never "out of credits".
 'use strict';
 
-const { LeoEngine, estimateCost } = require('./leo-engine.js');
+const { LeoEngine, estimateCost, IMAGE_COST } = require('./leo-engine.js');
 
 class NoAccountsLeft extends Error {}
 
@@ -150,6 +150,58 @@ class AccountManager {
           continue;
         }
         throw e; // unrelated error — don't burn an account
+      }
+    }
+    throw new NoAccountsLeft('exhausted all rotations');
+  }
+
+  // Image generation — same rotation logic as makeVideo.
+  // job = { prompt, ratio, quality, promptEnhance }
+  // Returns { url, slot }.
+  async makeImage(job, onEvent) {
+    const { eng, gid, slot } = await this._withLock(() => this._submitImage(job, onEvent));
+    if (onEvent) onEvent('queued', { gid });
+    await eng.waitComplete(gid, { onTick: (s) => onEvent && onEvent('status', { status: s }) });
+    const url = await eng.getImageUrl(gid);
+    return { url, slot };
+  }
+
+  async _submitImage(job, onEvent) {
+    const need = IMAGE_COST[job.ratio || '1:1'] || 573;
+    const maxRot = this.pool().length + 1;
+    for (let attempt = 0; attempt <= maxRot; attempt++) {
+      const eng = await this.engine(onEvent);
+      let bal = null;
+      try {
+        const credits = await eng.getCredits();
+        bal = credits.total;
+        if (onEvent) onEvent('credit_balance', { balance: bal, need, model: 'gpt-image-2', ratio: job.ratio });
+      } catch (e) {
+        if (onEvent) onEvent('rotate', { reason: 'credit_check_failed', error: e.message });
+        await this._rotate(onEvent);
+        continue;
+      }
+      if (bal < need) {
+        if (onEvent) onEvent('rotate', { reason: 'low_credits', balance: bal, need });
+        await this._rotate(onEvent);
+        continue;
+      }
+      try {
+        if (onEvent) onEvent('generating', { slot: this._state().active, model: 'gpt-image-2' });
+        const gid = await eng.generateImage(job.prompt, {
+          ratio: job.ratio || '1:1',
+          quality: job.quality || 'HIGH',
+          promptEnhance: job.promptEnhance !== false,
+        });
+        return { eng, gid, slot: this._state().active };
+      } catch (e) {
+        const m = (e.message || '').toLowerCase();
+        if (['token','credit','insufficient','quota','not enough','unauthorized','401'].some(s => m.includes(s))) {
+          if (onEvent) onEvent('rotate', { reason: 'api_error', error: e.message.slice(0,200) });
+          await this._rotate(onEvent);
+          continue;
+        }
+        throw e;
       }
     }
     throw new NoAccountsLeft('exhausted all rotations');
