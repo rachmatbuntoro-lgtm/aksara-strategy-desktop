@@ -42,6 +42,6 @@
     "electron-builder": "^24.13.3"
   },
   "dependencies": {
-    "electron-store": "^8.2.0"
+    "electron-store": "^6.0.1"
   }
 }
