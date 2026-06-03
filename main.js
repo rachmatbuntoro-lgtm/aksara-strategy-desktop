@@ -8,6 +8,8 @@ const { runSignup, refreshToken, setOtpFetcher } = require('./signup-engine.js')
 const { GeminiEngine, getStoryboardPrompt, VIDEO_PROMPT_LOCKED } = require('./gemini-engine.js');
 
 // Simple JSON store replacement (no external deps)
+const http = require('http');
+
 const storePath = path.join(app.getPath('userData'), 'config.json');
 let _data = {};
 try { _data = JSON.parse(fs.readFileSync(storePath, 'utf8')); } catch {}
@@ -17,7 +19,7 @@ const store = {
   clear: () => { _data = {}; fs.writeFileSync(storePath, '{}'); },
   path: storePath,
 };
-const LICENSE_API = 'aksara-license.fly.dev';
+const LICENSE_API = '43.134.62.172:3100';
 
 let mainWin = null;
 let jobQueue = null;
@@ -34,8 +36,9 @@ function deviceId() {
 function apiPost(pathName, body) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify(body);
-    const req = https.request({
-      hostname: LICENSE_API,
+    const req = http.request({
+      hostname: '43.134.62.172',
+      port: 3100,
       path: pathName,
       method: 'POST',
       headers: {
