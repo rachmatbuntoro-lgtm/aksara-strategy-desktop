@@ -322,7 +322,7 @@ class GeminiEngine {
   // ---- API Calls (from main process using extracted cookies) ----
 
   // Step 1: Start resumable upload → get upload URL
-  async _startUpload(filename) {
+  async _startUpload(filename, fileSize) {
     const body = `File name: ${filename}`;
     const r = await fetch(UPLOAD_URL, {
       method: 'POST',
@@ -331,7 +331,7 @@ class GeminiEngine {
         'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
         'X-Goog-Upload-Command': 'start',
         'X-Goog-Upload-Protocol': 'resumable',
-        'X-Goog-Upload-Header-Content-Length': String(Buffer.byteLength(body)),
+        'X-Goog-Upload-Header-Content-Length': String(fileSize),
         'Cookie': this._cookieString(),
         'Origin': GEMINI_ORIGIN,
         'Referer': GEMINI_ORIGIN + '/',
@@ -455,7 +455,7 @@ class GeminiEngine {
     const mimeType = mimeMap[ext] || 'image/jpeg';
 
     this.log(`[gemini] Upload ${name} (${(bytes.length / 1024).toFixed(1)} KB, ${mimeType})...`);
-    const uploadUrl = await this._startUpload(name);
+    const uploadUrl = await this._startUpload(name, bytes.length);
     const fileRef = await this._uploadBinary(uploadUrl, bytes, mimeType);
     this.log(`[gemini] Upload OK: ${fileRef.slice(0, 50)}...`);
     return fileRef;
