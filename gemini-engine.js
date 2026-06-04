@@ -346,13 +346,13 @@ class GeminiEngine {
   }
 
   // Step 2: Upload file bytes → get file reference path
-  async _uploadBinary(uploadUrl, fileBytes) {
+  async _uploadBinary(uploadUrl, fileBytes, mimeType = 'image/jpeg') {
     const r = await fetch(uploadUrl, {
       method: 'POST',
       headers: {
         'X-Goog-Upload-Command': 'upload, finalize',
         'X-Goog-Upload-Offset': '0',
-        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+        'Content-Type': mimeType,
         'Cookie': this._cookieString(),
         'Origin': GEMINI_ORIGIN,
         'Referer': GEMINI_ORIGIN + '/',
@@ -449,9 +449,14 @@ class GeminiEngine {
       name = filename || 'upload.jpg';
     }
 
-    this.log(`[gemini] Upload ${name} (${(bytes.length / 1024).toFixed(1)} KB)...`);
+    // Detect MIME type from extension
+    const ext = path.extname(name).toLowerCase();
+    const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif' };
+    const mimeType = mimeMap[ext] || 'image/jpeg';
+
+    this.log(`[gemini] Upload ${name} (${(bytes.length / 1024).toFixed(1)} KB, ${mimeType})...`);
     const uploadUrl = await this._startUpload(name);
-    const fileRef = await this._uploadBinary(uploadUrl, bytes);
+    const fileRef = await this._uploadBinary(uploadUrl, bytes, mimeType);
     this.log(`[gemini] Upload OK: ${fileRef.slice(0, 50)}...`);
     return fileRef;
   }
