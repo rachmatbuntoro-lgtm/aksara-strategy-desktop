@@ -185,6 +185,8 @@ ipcMain.handle('activate', async (_e, key) => {
   store.set('license_key', key);
   store.set('canva_invite_url', v.canva_invite_url);
   store.set('license_expires', v.expires_at || null);
+  store.set('gemini_email', v.gemini_email || null);
+  store.set('gemini_password', v.gemini_password || null);
   accounts.setLicense(key, pool);
 
   const entry = pool[0];
@@ -249,7 +251,10 @@ ipcMain.handle('job-remove', (_e, id) => { jobQueue.remove(id); return true; });
 let geminiEngine = null;
 
 function getGemini() {
-  if (!geminiEngine) geminiEngine = new GeminiEngine(log);
+  if (!geminiEngine) geminiEngine = new GeminiEngine(log, {
+    email: store.get('gemini_email'),
+    password: store.get('gemini_password'),
+  });
   return geminiEngine;
 }
 

@@ -193,12 +193,14 @@ Gunakan bahasa Indonesia yang jelas, padat, dan generation-friendly. Output hany
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 class GeminiEngine {
-  constructor(log) {
+  constructor(log, creds = {}) {
     this.log = log || (() => {});
     this.win = null;           // hidden BrowserWindow
     this.cookies = {};         // extracted cookie string
     this.authToken = null;     // at= param from page
     this.ready = false;
+    this.geminiEmail = creds.email || null;
+    this.geminiPassword = creds.password || null;
   }
 
   // ---- Session Management ----
@@ -233,14 +235,23 @@ class GeminiEngine {
     // Check if user is logged in by looking for the chat interface
     const isLoggedIn = await this._checkLogin();
     if (!isLoggedIn) {
-      this.log('[gemini] PERLU LOGIN! Window terbuka — silakan login Google.');
-      this.win.show();
-      // Wait for user to login (max 5 minutes)
-      const loginOk = await this._waitForLogin(300000);
-      if (!loginOk) {
-        throw new Error('Login timeout — silakan coba lagi');
+      if (this.geminiEmail && this.geminiPassword) {
+        this.log('[gemini] Auto-login dengan akun Google...');
+        const loginOk = await this._autoLogin();
+        if (!loginOk) {
+          this.log('[gemini] Auto-login gagal, buka manual...');
+          this.win.show();
+          const manualOk = await this._waitForLogin(300000);
+          if (!manualOk) throw new Error('Login timeout — silakan coba lagi');
+          this.win.hide();
+        }
+      } else {
+        this.log('[gemini] PERLU LOGIN! Window terbuka — silakan login Google.');
+        this.win.show();
+        const loginOk = await this._waitForLogin(300000);
+        if (!loginOk) throw new Error('Login timeout — silakan coba lagi');
+        this.win.hide();
       }
-      this.win.hide();
     }
 
     // Extract cookies and auth token
@@ -279,6 +290,116 @@ class GeminiEngine {
       if (await this._checkLogin()) return true;
     }
     return false;
+  }
+
+  // Auto-login with stored credentials. Returns true if successful.
+  async _autoLogin() {
+    try {
+      const wc = this.win.webContents;
+      
+      // Navigate to Google login
+      await wc.loadURL('https://accounts.google.com/signin/v2/identifier?service=acm&flowName=GlifWebSignIn&flowEntry=ServiceLogin&continue=https://gemini.google.com/', { userAgent: UA });
+      await sleep(3000);
+
+      // Fill email
+      await wc.executeJavaScript(`
+        (function() {
+          var input = document.querySelector('input[type="email"], input#identifierId');
+          if (input) {
+            input.value = ${JSON.stringify(this.geminiEmail)};
+            input.dispatchEvent(new Event('input', {bubbles: true}));
+            input.dispatchEvent(new Event('change', {bubbles: true}));
+          }
+        })()
+      `);
+      await sleep(1000);
+
+      // Click Next button
+      await wc.executeJavaScript(`
+        (function() {
+          var btn = document.querySelector('#identifierNext, button[jsname="LgbsSe"]');
+          if (btn) btn.click();
+        })()
+      `);
+      await sleep(3000);
+
+      // Check if we hit CAPTCHA or challenge
+      const challengeType = await wc.executeJavaScript(`
+        (function() {
+          if (document.querySelector('img[alt*="captcha"], img[alt*="CAPTCHA"]')) return 'captcha';
+          if (document.querySelector('input[type="tel"], input[name="totpPin"]')) return '2fa';
+          if (document.querySelector('#knowledge-preregistered-email-response, input[type="email"]')) return 'recovery';
+          return null;
+        })()
+      `);
+
+      if (challengeType) {
+        this.log('[gemini] Auto-login: Google minta ' + challengeType + ', fallback ke manual');
+        // Navigate back to Gemini so manual login flow works
+        await wc.loadURL(GEMINI_ORIGIN, { userAgent: UA });
+        await sleep(2000);
+        return false;
+      }
+
+      // Fill password
+      const hasPasswordField = await wc.executeJavaScript(
+        '!!document.querySelector("input[type=password], input[name=Passwd]")'
+      );
+      if (!hasPasswordField) {
+        this.log('[gemini] Auto-login: password field ga muncul, fallback');
+        await wc.loadURL(GEMINI_ORIGIN, { userAgent: UA });
+        await sleep(2000);
+        return false;
+      }
+
+      await wc.executeJavaScript(`
+        (function() {
+          var input = document.querySelector('input[type="password"], input[name="Passwd"]');
+          if (input) {
+            input.value = ${JSON.stringify(this.geminiPassword)};
+            input.dispatchEvent(new Event('input', {bubbles: true}));
+            input.dispatchEvent(new Event('change', {bubbles: true}));
+          }
+        })()
+      `);
+      await sleep(1000);
+
+      // Click Next/Sign in button
+      await wc.executeJavaScript(`
+        (function() {
+          var btn = document.querySelector('#passwordNext, button[jsname="LgbsSe"]');
+          if (btn) btn.click();
+        })()
+      `);
+      await sleep(5000);
+
+      // Check if redirected to Gemini (success)
+      const finalUrl = wc.getURL();
+      if (finalUrl.includes('gemini.google.com')) {
+        this.log('[gemini] Auto-login sukses!');
+        return true;
+      }
+
+      // Check for post-login challenges
+      const postChallenge = await wc.executeJavaScript(`
+        (function() {
+          if (document.querySelector('input[type="tel"], input[name="totpPin"]')) return '2fa';
+          if (document.querySelector('img[alt*="captcha"]')) return 'captcha';
+          return null;
+        })()
+      `);
+
+      if (postChallenge) {
+        this.log('[gemini] Auto-login: post-login challenge ' + postChallenge);
+        return false;
+      }
+
+      this.log('[gemini] Auto-login: redirect gagal, url=' + finalUrl.slice(0, 80));
+      return false;
+    } catch (e) {
+      this.log('[gemini] Auto-login error: ' + e.message);
+      return false;
+    }
   }
 
   async _extractSession() {
