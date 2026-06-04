@@ -214,6 +214,8 @@ class GeminiEngine {
       show: false,
       width: 800,
       height: 600,
+      alwaysOnTop: true,
+      title: 'Login Google — Aksara Strategy',
       webPreferences: {
         partition: PARTITION,
         contextIsolation: true,
@@ -252,11 +254,21 @@ class GeminiEngine {
     try {
       const url = this.win.webContents.getURL();
       if (url.includes('accounts.google.com') || url.includes('Signin')) return false;
-      // Check if chat input exists
-      const hasChat = await this.win.webContents.executeJavaScript(
-        '!!document.querySelector("rich-textarea, .ql-editor, [contenteditable]")'
+      // Check for actual Gemini chat interface — need BOTH the text area AND no login overlay
+      const result = await this.win.webContents.executeJavaScript(
+        `(function() {
+          // Must have the actual Gemini chat input
+          var ta = document.querySelector('rich-textarea .ql-editor');
+          if (!ta) return false;
+          // Must NOT have any "Sign in" button visible
+          var signIn = document.querySelector('a[href*="accounts.google.com"]');
+          if (signIn && signIn.offsetParent !== null) return false;
+          // Check for user avatar (indicates logged in)
+          var avatar = document.querySelector('img[data-src*="googleusercontent"], a[aria-label*="Account"], img[alt*="Profile"]');
+          return !!avatar || !!ta;
+        })()`
       );
-      return !!hasChat;
+      return !!result;
     } catch { return false; }
   }
 
