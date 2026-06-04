@@ -505,6 +505,26 @@ function doLogout(msg) {
   _licenseExpired = false;
   log('[license] Force logout: ' + msg);
   store.clear();
+
+  // Clear all sessions (Gemini + Canva)
+  try {
+    const { session } = require('electron');
+    for (const partition of ['persist:webkita-gemini', 'persist:webkita']) {
+      const ses = session.fromPartition(partition);
+      ses.clearStorageData();
+      ses.clearCache();
+    }
+    log('[license] All sessions cleared.');
+  } catch (e) {
+    log('[license] Clear session error: ' + e.message);
+  }
+
+  // Reset Gemini engine so next use requires fresh login
+  if (geminiEngine) {
+    try { geminiEngine.win?.destroy(); } catch {}
+    geminiEngine = null;
+  }
+
   if (mainWin && !mainWin.isDestroyed()) {
     mainWin.webContents.send('session-expired', msg);
   }
