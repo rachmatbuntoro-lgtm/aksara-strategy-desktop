@@ -299,52 +299,74 @@ class GeminiEngine {
       
       // Navigate to Google login
       await wc.loadURL('https://accounts.google.com/signin/v2/identifier?service=acm&flowName=GlifWebSignIn&flowEntry=ServiceLogin&continue=https://gemini.google.com/', { userAgent: UA });
-      await sleep(3000);
+      await sleep(4000);
 
-      // Fill email
+      // Check if email field exists
+      const hasEmailField = await wc.executeJavaScript(
+        '!!document.querySelector(\'input[type="email"], input#identifierId\')'
+      );
+      if (!hasEmailField) {
+        this.log('[gemini] Auto-login: email field ga ketemu');
+        await wc.loadURL(GEMINI_ORIGIN, { userAgent: UA });
+        await sleep(2000);
+        return false;
+      }
+
+      // Click email field first to focus it
       await wc.executeJavaScript(`
         (function() {
           var input = document.querySelector('input[type="email"], input#identifierId');
-          if (input) {
-            input.value = ${JSON.stringify(this.geminiEmail)};
-            input.dispatchEvent(new Event('input', {bubbles: true}));
-            input.dispatchEvent(new Event('change', {bubbles: true}));
-          }
+          if (input) { input.focus(); input.click(); }
         })()
       `);
-      await sleep(1000);
+      await sleep(500);
+
+      // Type email character by character using native input events
+      for (const char of this.geminiEmail) {
+        wc.sendInputEvent({ type: 'char', char });
+        await sleep(30 + Math.random() * 50);
+      }
+      await sleep(800);
 
       // Click Next button
       await wc.executeJavaScript(`
         (function() {
-          var btn = document.querySelector('#identifierNext, button[jsname="LgbsSe"]');
-          if (btn) btn.click();
+          var btn = document.querySelector('#identifierNext');
+          if (btn) { btn.click(); return true; }
+          // Fallback: find button with "Next" text
+          var btns = document.querySelectorAll('button');
+          for (var b of btns) { if (b.textContent.includes('Next') || b.textContent.includes('Berikut')) { b.click(); return true; } }
+          return false;
         })()
       `);
-      await sleep(3000);
+      await sleep(4000);
 
       // Check if we hit CAPTCHA or challenge
       const challengeType = await wc.executeJavaScript(`
         (function() {
-          if (document.querySelector('img[alt*="captcha"], img[alt*="CAPTCHA"]')) return 'captcha';
-          if (document.querySelector('input[type="tel"], input[name="totpPin"]')) return '2fa';
-          if (document.querySelector('#knowledge-preregistered-email-response, input[type="email"]')) return 'recovery';
+          if (document.querySelector('img[alt*="captcha"], img[alt*="CAPTCHA"], iframe[src*="captcha"]')) return 'captcha';
+          if (document.querySelector('input[type="tel"], input[name="totpPin"], input[id="totpPin"]')) return '2fa';
+          if (document.querySelector('#knowledge-preregistered-email-response')) return 'recovery';
           return null;
         })()
       `);
 
       if (challengeType) {
         this.log('[gemini] Auto-login: Google minta ' + challengeType + ', fallback ke manual');
-        // Navigate back to Gemini so manual login flow works
         await wc.loadURL(GEMINI_ORIGIN, { userAgent: UA });
         await sleep(2000);
         return false;
       }
 
-      // Fill password
-      const hasPasswordField = await wc.executeJavaScript(
-        '!!document.querySelector("input[type=password], input[name=Passwd]")'
-      );
+      // Wait for password field to appear
+      let hasPasswordField = false;
+      for (let i = 0; i < 10; i++) {
+        hasPasswordField = await wc.executeJavaScript(
+          '!!document.querySelector(\'input[type="password"], input[name="Passwd"], input[name="password"]\')'
+        );
+        if (hasPasswordField) break;
+        await sleep(1000);
+      }
       if (!hasPasswordField) {
         this.log('[gemini] Auto-login: password field ga muncul, fallback');
         await wc.loadURL(GEMINI_ORIGIN, { userAgent: UA });
@@ -352,26 +374,33 @@ class GeminiEngine {
         return false;
       }
 
+      // Click password field to focus
       await wc.executeJavaScript(`
         (function() {
-          var input = document.querySelector('input[type="password"], input[name="Passwd"]');
-          if (input) {
-            input.value = ${JSON.stringify(this.geminiPassword)};
-            input.dispatchEvent(new Event('input', {bubbles: true}));
-            input.dispatchEvent(new Event('change', {bubbles: true}));
-          }
+          var input = document.querySelector('input[type="password"], input[name="Passwd"], input[name="password"]');
+          if (input) { input.focus(); input.click(); }
         })()
       `);
-      await sleep(1000);
+      await sleep(500);
+
+      // Type password character by character
+      for (const char of this.geminiPassword) {
+        wc.sendInputEvent({ type: 'char', char });
+        await sleep(30 + Math.random() * 50);
+      }
+      await sleep(800);
 
       // Click Next/Sign in button
       await wc.executeJavaScript(`
         (function() {
-          var btn = document.querySelector('#passwordNext, button[jsname="LgbsSe"]');
-          if (btn) btn.click();
+          var btn = document.querySelector('#passwordNext');
+          if (btn) { btn.click(); return true; }
+          var btns = document.querySelectorAll('button');
+          for (var b of btns) { if (b.textContent.includes('Next') || b.textContent.includes('Berikut') || b.textContent.includes('Sign in')) { b.click(); return true; } }
+          return false;
         })()
       `);
-      await sleep(5000);
+      await sleep(6000);
 
       // Check if redirected to Gemini (success)
       const finalUrl = wc.getURL();
