@@ -1205,6 +1205,63 @@ function StoryboardPage({ go, submitStoryboard, studioData, setStudioData, setAc
               </button>
             </div>
           </div>
+
+          {/* Results Panel - inline below upload */}
+          {sbResult && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-4"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <CheckCircle2 size={18} style={{ color: BRAND.accent }} />
+                <h2 className="text-lg font-semibold">Hasil Storyboard</h2>
+              </div>
+
+              {/* Storyboard Image */}
+              {sbResult.storyboardImageUrl && (
+                <div className="rounded-2xl border border-white/10 bg-black/20 overflow-hidden">
+                  <div className="px-4 pt-3 pb-2 text-[10px] font-semibold tracking-wide text-white/50">GAMBAR STORYBOARD</div>
+                  <img
+                    src={sbResult.storyboardImageUrl}
+                    alt="Storyboard"
+                    className="w-full object-contain max-h-[300px]"
+                  />
+                </div>
+              )}
+
+              {/* Video Prompt */}
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-[10px] font-semibold tracking-wide text-white/50">VIDEO PROMPT</div>
+                  <button
+                    onClick={() => navigator.clipboard?.writeText(sbResult.videoPrompt)}
+                    className="flex items-center gap-1 text-[10px] text-white/40 hover:text-white/70 transition"
+                  >
+                    <Copy size={10} /> Copy
+                  </button>
+                </div>
+                <p className="text-xs text-white/80 leading-relaxed whitespace-pre-wrap">{sbResult.videoPrompt}</p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <PrimaryButton
+                  icon={Film}
+                  onClick={handleGoStudio}
+                  className="flex-1 py-3 text-sm"
+                >
+                  Generate Video di Studio
+                </PrimaryButton>
+                <button
+                  onClick={() => navigator.clipboard?.writeText(sbResult.videoPrompt)}
+                  className="flex items-center gap-2 px-4 rounded-xl border border-white/10 bg-white/[.03] text-xs text-white/60 hover:text-white/80 hover:bg-white/[.06] transition"
+                >
+                  <Copy size={12} /> Copy Prompt
+                </button>
+              </div>
+            </motion.div>
+          )}
         </div>
 
         {/* Right: Category, Variation, Generate */}
@@ -1303,63 +1360,6 @@ function StoryboardPage({ go, submitStoryboard, studioData, setStudioData, setAc
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Results Panel */}
-      {sbResult && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-8 space-y-6"
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <CheckCircle2 size={20} style={{ color: BRAND.accent }} />
-            <h2 className="text-xl font-semibold">Hasil Storyboard</h2>
-          </div>
-
-          {/* Storyboard Image */}
-          {sbResult.storyboardImageUrl && (
-            <div className="rounded-[28px] border border-white/10 bg-black/20 overflow-hidden">
-              <div className="px-5 pt-4 pb-2 text-xs font-semibold tracking-wide text-white/50">GAMBAR STORYBOARD</div>
-              <img
-                src={sbResult.storyboardImageUrl}
-                alt="Storyboard"
-                className="w-full object-contain max-h-[400px]"
-              />
-            </div>
-          )}
-
-          {/* Video Prompt */}
-          <div className="rounded-[28px] border border-white/10 bg-black/20 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-xs font-semibold tracking-wide text-white/50">VIDEO PROMPT (SEEDANCE 2)</div>
-              <button
-                onClick={() => navigator.clipboard?.writeText(sbResult.videoPrompt)}
-                className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition"
-              >
-                <Copy size={12} /> Copy
-              </button>
-            </div>
-            <p className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap">{sbResult.videoPrompt}</p>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-3">
-            <PrimaryButton
-              icon={Film}
-              onClick={handleGoStudio}
-              className="flex-1 py-4 text-base shadow-lg shadow-sky-900/20"
-            >
-              Generate Video di Studio
-            </PrimaryButton>
-            <button
-              onClick={() => navigator.clipboard?.writeText(sbResult.videoPrompt)}
-              className="flex items-center gap-2 px-5 rounded-2xl border border-white/10 bg-white/[.03] text-sm text-white/60 hover:text-white/80 hover:bg-white/[.06] transition"
-            >
-              <Copy size={14} /> Copy Prompt
-            </button>
-          </div>
-        </motion.div>
-      )}
     </motion.div>
   );
 }
