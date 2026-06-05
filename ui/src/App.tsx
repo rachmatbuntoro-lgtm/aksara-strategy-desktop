@@ -945,9 +945,22 @@ function FailedJobCard({ job, onRetry, onRemove }) {
 }
 
 function QueueResultsPage({ go, generateAgain, jobs = [] }) {
-  const active = jobs.filter((j) => j.status === "processing" || j.status === "queued");
-  const failed = jobs.filter((j) => j.status === "failed");
-  const completed = jobs.filter((j) => j.status === "done");
+  const [folder, setFolder] = useState("all");
+
+  const filterByFolder = (list) => {
+    if (folder === "all") return list;
+    if (folder === "photo") return list.filter(j => j.model === "storyboard" || j.category === "storyboard");
+    if (folder === "video") return list.filter(j => j.model !== "storyboard" && j.category !== "storyboard");
+    return list;
+  };
+
+  const active = filterByFolder(jobs.filter((j) => j.status === "processing" || j.status === "queued"));
+  const failed = filterByFolder(jobs.filter((j) => j.status === "failed"));
+  const completed = filterByFolder(jobs.filter((j) => j.status === "done"));
+
+  const photoCount = jobs.filter(j => j.model === "storyboard" || j.category === "storyboard").length;
+  const videoCount = jobs.filter(j => j.model !== "storyboard" && j.category !== "storyboard").length;
+
   const onRetry = (id) => { if (window.webkita) window.webkita.jobRetry(id); };
   const onRemove = (id) => { if (window.webkita) window.webkita.jobRemove(id); };
 
@@ -956,8 +969,34 @@ function QueueResultsPage({ go, generateAgain, jobs = [] }) {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Queue & Hasil</h1>
-          <p className="text-sm text-white/50 mt-1">Pantau proses render dan unduh video yang sudah selesai.</p>
+          <p className="text-sm text-white/50 mt-1">Pantau proses render dan unduh hasil yang sudah selesai.</p>
         </div>
+      </div>
+
+      {/* Folder tabs */}
+      <div className="flex gap-2 mb-8">
+        {[
+          { id: "all", label: "Semua", count: jobs.length },
+          { id: "photo", label: "📷 Photo", count: photoCount },
+          { id: "video", label: "🎬 Video", count: videoCount },
+        ].map((tab) => {
+          const sel = folder === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setFolder(tab.id)}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
+              style={{
+                background: sel ? BRAND.accent : "rgba(255,255,255,.05)",
+                color: sel ? "#102027" : "rgba(255,255,255,.5)",
+                border: sel ? "none" : "1px solid rgba(255,255,255,.1)",
+              }}
+            >
+              {tab.label}
+              <span className="text-xs opacity-60">({tab.count})</span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pb-10">
