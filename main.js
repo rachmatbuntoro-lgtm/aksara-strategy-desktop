@@ -110,6 +110,9 @@ function createMain() {
   const builtUI = path.join(__dirname, 'ui', 'dist', 'index.html');
   if (fs.existsSync(builtUI)) mainWin.loadFile(builtUI);
   else mainWin.loadFile('renderer/index.html');
+
+  log('=== Aksara Strategy started ===');
+  log('userData: ' + app.getPath('userData'));
 }
 
 // ---- Account Manager wiring ----
