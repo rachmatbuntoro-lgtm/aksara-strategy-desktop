@@ -300,6 +300,7 @@ function getGemini() {
         apiKey: geminiKeys.length === 0 ? singleKey : undefined,
         licenseKey: store.get('license_key') || '',
         adminUrl: `http://${LICENSE_API}`,
+        provider: 'mimo',  // primary: mimo v2.5 (OpenAI-compatible)
       });
       geminiInstance._fingerprint = keyFingerprint;
     }

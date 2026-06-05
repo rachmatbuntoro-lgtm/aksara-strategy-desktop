@@ -1,17 +1,28 @@
-// Gemini API engine — uses official Google AI Studio API key.
-// NO browser, NO cookies, NO web scraping. Simple fetch calls.
-// Supports multi-key rotation with automatic failover on 429/error.
+// AI API engine — MiMo v2.5 primary, Gemini fallback.
+// OpenAI-compatible API format for MiMo, native Gemini format for fallback.
+// Supports multi-key rotation with automatic failover on error.
 //
-// Get free API key: https://aistudio.google.com/apikey
-// Free tier: 15 RPM, 1500 RPD — enough for ~750 storyboards/day.
+// MiMo API: https://platform.xiaomimimo.com
+// Gemini API: https://aistudio.google.com/apikey
 
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
 
-const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const MODEL = 'gemini-2.0-flash';
+// ---- Provider Config ----
+const PROVIDERS = {
+  mimo: {
+    apiBase: 'https://api.xiaomimimo.com/v1',
+    model: 'mimo-v2.5',  // omnimodal — image+video+audio+text (NOT mimo-v2.5-pro which is text-only!)
+    format: 'openai',    // OpenAI-compatible
+  },
+  gemini: {
+    apiBase: 'https://generativelanguage.googleapis.com/v1beta/models',
+    model: 'gemini-2.5-flash-lite',
+    format: 'gemini',    // native Gemini format
+  },
+};
 
 // ---- Hidden Prompts (hardcoded) ----
 const STORYBOARD_PROMPTS = {
@@ -83,7 +94,7 @@ function getStoryboardPrompt(category, variation) {
   return STORYBOARD_PROMPTS[category]?.[variation] || STORYBOARD_PROMPTS.ugc.silent;
 }
 
-// ---- Gemini API Class (multi-key rotation) ----
+// ---- AI API Class (multi-provider, multi-key rotation) ----
 class GeminiAPI {
   /**
    * @param {Function} logFn  - logging function
@@ -92,17 +103,21 @@ class GeminiAPI {
    * @param {Array}    [opts.geminiApiKeys]  - array of {id, api_key, label} from server
    * @param {string}   [opts.licenseKey]     - license key for error reporting
    * @param {string}   [opts.adminUrl]       - base URL for report endpoint
+   * @param {string}   [opts.provider]       - 'mimo' or 'gemini' (default: 'mimo')
    */
   constructor(logFn, opts = {}) {
     this.log = logFn || (() => {});
-    // Support legacy single-key constructor: (logFn, apiKey)
     if (typeof opts === 'string') {
       opts = { apiKey: opts };
     }
     this.licenseKey = opts.licenseKey || '';
     this.adminUrl = opts.adminUrl || '';
 
-    // Build key pool from server-provided keys, fallback to single key
+    // Provider selection (default: mimo)
+    this._providerName = opts.provider || 'mimo';
+    this._provider = PROVIDERS[this._providerName] || PROVIDERS.mimo;
+
+    // Build key pool
     this._keys = [];
     if (Array.isArray(opts.geminiApiKeys) && opts.geminiApiKeys.length > 0) {
       this._keys = opts.geminiApiKeys.map(k => ({
@@ -111,15 +126,16 @@ class GeminiAPI {
         label: k.label || '',
       }));
     } else if (opts.apiKey) {
-      // Legacy: single key, no server id
       this._keys = [{ id: 0, apiKey: opts.apiKey, label: 'local' }];
     }
 
-    this._cursor = 0; // round-robin cursor
-    this.log(`[gemini-api] Initialized with ${this._keys.length} API key(s)`);
+    this._cursor = 0;
+    this._lastCallTime = 0;
+    this._minIntervalMs = 1000; // 1s between calls (MiMo: 100 RPM, safe)
+    this.log(`[ai-api] Initialized with ${this._keys.length} key(s), provider: ${this._providerName}, model: ${this._provider.model}`);
   }
 
-  /** Update key pool (called after license validate returns new keys) */
+  /** Update key pool */
   updateKeys(geminiApiKeys) {
     if (!Array.isArray(geminiApiKeys) || geminiApiKeys.length === 0) return;
     this._keys = geminiApiKeys.map(k => ({
@@ -128,35 +144,24 @@ class GeminiAPI {
       label: k.label || '',
     }));
     this._cursor = 0;
-    this.log(`[gemini-api] Key pool updated: ${this._keys.length} key(s)`);
+    this.log(`[ai-api] Key pool updated: ${this._keys.length} key(s)`);
   }
 
-  /** Total keys available */
   get keyCount() { return this._keys.length; }
 
-  /** Get current key info (for UI display) */
   get currentKeyInfo() {
     if (!this._keys.length) return null;
     const k = this._keys[this._cursor % this._keys.length];
     return { id: k.id, label: k.label, masked: k.apiKey.slice(0, 8) + '…' + k.apiKey.slice(-4) };
   }
 
-  /** Select next key (round-robin, skip errored) */
   _nextKey() {
-    if (!this._keys.length) throw new Error('Tidak ada Gemini API key tersedia');
-    const start = this._cursor;
-    for (let i = 0; i < this._keys.length; i++) {
-      const idx = (start + i) % this._keys.length;
-      this._cursor = (idx + 1) % this._keys.length; // advance for next call
-      return this._keys[idx];
-    }
-    // All keys tried — just use the next one anyway
-    const idx = start % this._keys.length;
+    if (!this._keys.length) throw new Error('Tidak ada API key tersedia');
+    const idx = this._cursor % this._keys.length;
     this._cursor = (idx + 1) % this._keys.length;
     return this._keys[idx];
   }
 
-  /** Report usage/error back to server (fire-and-forget) */
   _report(keyId, success, errorMessage) {
     if (!this.licenseKey || !this.adminUrl || keyId === 0) return;
     const url = `${this.adminUrl}/api/admin/keys/${encodeURIComponent(this.licenseKey)}/gemini-keys/${keyId}/report`;
@@ -164,97 +169,160 @@ class GeminiAPI {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ success, error_message: errorMessage || null }),
-    }).catch(() => {}); // fire-and-forget
+    }).catch(() => {});
   }
 
-  // Send prompt with images -> get text response (with rotation)
-  async generate(prompt, imagePaths = []) {
-    if (!this._keys.length) throw new Error('Gemini API key belum di-set');
-
-    // Build parts array (same for all attempts)
-    const parts = [{ text: prompt }];
+  /** Build OpenAI-format image content from file paths */
+  _buildImageParts(imagePaths) {
+    const imageParts = [];
     for (const imgPath of imagePaths) {
       if (!imgPath || !fs.existsSync(imgPath)) continue;
       const bytes = fs.readFileSync(imgPath);
       const ext = path.extname(imgPath).toLowerCase().replace('.', '');
       const mimeMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif' };
       const mimeType = mimeMap[ext] || 'image/jpeg';
-      parts.push({
-        inlineData: {
-          mimeType,
-          data: bytes.toString('base64'),
-        },
+      imageParts.push({
+        type: 'image_url',
+        image_url: { url: `data:${mimeType};base64,${bytes.toString('base64')}` },
       });
-      this.log(`[gemini-api] Added image: ${path.basename(imgPath)} (${(bytes.length / 1024).toFixed(0)}KB)`);
+      this.log(`[ai-api] Added image: ${path.basename(imgPath)} (${(bytes.length / 1024).toFixed(0)}KB)`);
+    }
+    return imageParts;
+  }
+
+  /** Make request in OpenAI-compatible format (MiMo) */
+  async _callOpenAI(prompt, imageParts, keyObj) {
+    const content = [
+      { type: 'text', text: prompt },
+      ...imageParts,
+    ];
+
+    const url = `${this._provider.apiBase}/chat/completions`;
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${keyObj.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: this._provider.model,
+        messages: [{ role: 'user', content }],
+        temperature: 0.7,
+        max_tokens: 2048,
+      }),
+    });
+
+    if (r.ok) {
+      const data = await r.json();
+      // MiMo returns reasoning_content separately; prefer content
+      const text = data.choices?.[0]?.message?.content || '';
+      return text.trim();
     }
 
-    // Try each key up to once
-    const maxAttempts = this._keys.length;
+    const errBody = await r.text().catch(() => '');
+    const err = new Error(`API error: ${r.status} ${errBody.slice(0, 200)}`);
+    err.status = r.status;
+    throw err;
+  }
+
+  /** Make request in native Gemini format (fallback) */
+  async _callGemini(prompt, imageParts, keyObj) {
+    const parts = [{ text: prompt }];
+    for (const img of imageParts) {
+      const base64Data = img.image_url.url.split(',')[1];
+      parts.push({
+        inlineData: {
+          mimeType: img.image_url.url.split(';')[0].replace('data:', ''),
+          data: base64Data,
+        },
+      });
+    }
+
+    const url = `${this._provider.apiBase}/${this._provider.model}:generateContent?key=${keyObj.apiKey}`;
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+      }),
+    });
+
+    if (r.ok) {
+      const data = await r.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      return text.trim();
+    }
+
+    const errBody = await r.text().catch(() => '');
+    const err = new Error(`API error: ${r.status} ${errBody.slice(0, 200)}`);
+    err.status = r.status;
+    throw err;
+  }
+
+  /** Main generate method with multi-key rotation + retry */
+  async generate(prompt, imagePaths = []) {
+    if (!this._keys.length) throw new Error('API key belum di-set');
+
+    const imageParts = this._buildImageParts(imagePaths);
+    const maxRounds = 3;
     let lastError = null;
 
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const keyObj = this._nextKey();
-      this.log(`[gemini-api] Attempt ${attempt + 1}/${maxAttempts} — key: ${keyObj.label || keyObj.apiKey.slice(0, 8) + '…'} (${parts.length} parts)`);
+    // Proactive rate limiting
+    const now = Date.now();
+    const elapsed = now - this._lastCallTime;
+    if (elapsed < this._minIntervalMs) {
+      const waitMs = this._minIntervalMs - elapsed;
+      this.log(`[ai-api] Rate limiting: waiting ${(waitMs / 1000).toFixed(1)}s...`);
+      await new Promise(r => setTimeout(r, waitMs));
+    }
+    this._lastCallTime = Date.now();
 
-      const url = `${API_BASE}/${MODEL}:generateContent?key=${keyObj.apiKey}`;
-      try {
-        const r = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts }],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 2048,
-            },
-          }),
-        });
+    // Select the right API caller
+    const callFn = this._provider.format === 'openai'
+      ? (p, img, k) => this._callOpenAI(p, img, k)
+      : (p, img, k) => this._callGemini(p, img, k);
 
-        if (r.ok) {
-          const data = await r.json();
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          this.log(`[gemini-api] Success via ${keyObj.label || 'key'}: ${text.length} chars`);
+    for (let round = 0; round < maxRounds; round++) {
+      if (round > 0) {
+        const waitSec = 30 * round;
+        this.log(`[ai-api] All keys failed. Round ${round + 1}/${maxRounds} — waiting ${waitSec}s...`);
+        await new Promise(r => setTimeout(r, waitSec * 1000));
+      }
+
+      for (let attempt = 0; attempt < this._keys.length; attempt++) {
+        const keyObj = this._nextKey();
+        this.log(`[ai-api] Round ${round + 1}, attempt ${attempt + 1}/${this._keys.length} — key: ${keyObj.label || keyObj.apiKey.slice(0, 8) + '…'} (${imageParts.length} images)`);
+
+        try {
+          const text = await callFn(prompt, imageParts, keyObj);
+          this.log(`[ai-api] Success via ${keyObj.label || 'key'}: ${text.length} chars`);
           this._report(keyObj.id, true);
-          return text.trim();
+          return text;
+        } catch (err) {
+          const status = err.status || 0;
+          this.log(`[ai-api] Error ${status}: ${err.message?.slice(0, 200)}`);
+          lastError = err;
+          this._report(keyObj.id, false, err.message);
+
+          // Retryable errors: 429, 500, 503, network
+          if (status === 429 || status === 500 || status === 503 || status === 0) {
+            continue;
+          }
+          // Bad key: 401, 403
+          if (status === 401 || status === 403) {
+            this.log(`[ai-api] Key invalid, trying next...`);
+            continue;
+          }
+          // Non-retryable
+          throw err;
         }
-
-        // 429 = rate limit, 503 = overload — try next key
-        const errBody = await r.text().catch(() => '');
-        const errMsg = `HTTP ${r.status}: ${errBody.slice(0, 200)}`;
-        this.log(`[gemini-api] Error ${r.status} on key ${keyObj.label || '…'}: ${errBody.slice(0, 300)}`);
-        lastError = new Error(`Gemini API error: ${r.status}`);
-
-        // Report failure for this key
-        this._report(keyObj.id, false, errMsg);
-
-        if (r.status === 429 || r.status === 503 || r.status === 500) {
-          // Rate limit or server error — rotate to next key
-          this.log(`[gemini-api] Rotating to next key...`);
-          continue;
-        }
-
-        // Other errors (400, 403, etc.) — likely bad key, but try next
-        if (r.status === 403 || r.status === 401) {
-          this.log(`[gemini-api] Key invalid/forbidden, rotating...`);
-          continue;
-        }
-
-        // Non-retryable error
-        throw lastError;
-      } catch (fetchErr) {
-        if (fetchErr.message?.startsWith('Gemini API error')) throw fetchErr;
-        lastError = fetchErr;
-        this.log(`[gemini-api] Fetch error: ${fetchErr.message}`);
-        this._report(keyObj.id, false, fetchErr.message);
-        continue;
       }
     }
 
-    // All keys exhausted
-    throw lastError || new Error('Semua Gemini API key gagal');
+    throw lastError || new Error(`Semua API key gagal setelah ${maxRounds} percobaan`);
   }
 
-  // Convenience: analyze images with a prompt
   async analyze(prompt, imagePaths = []) {
     return this.generate(prompt, imagePaths);
   }
