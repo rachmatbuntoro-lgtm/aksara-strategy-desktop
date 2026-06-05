@@ -63,6 +63,25 @@ function nowMinus(sec) {
   return new Date(Date.now() - sec * 1000).toISOString().replace(/\.\d+Z$/, 'Z');
 }
 
+// Fire-and-forget tracking call for Leonardo account usage
+function trackLeoAccount(action) {
+  const key = store.get('license_key');
+  if (!key) return;
+  const s = accounts._state();
+  const activeSlot = s.active;
+  if (!activeSlot || !s.accounts[activeSlot]) return;
+  const acct = s.accounts[activeSlot];
+  try {
+    apiPost('/api/track/leo-account', {
+      key,
+      device_id: deviceId(),
+      slot: parseInt(activeSlot, 10) || 0,
+      email: acct.email || '',
+      action,
+    }).catch(() => {}); // fire-and-forget
+  } catch (_) {}
+}
+
 async function fetchOtp(key, recipient, attempts = 30) {
   const since = nowMinus(90);
   for (let i = 0; i < attempts; i++) {
@@ -148,7 +167,7 @@ async function refreshSession(acct) {
 
 const accounts = new AccountManager(store, signupForSlot, refreshSession);
 
-jobQueue = new JobQueue(store, accounts, log);
+jobQueue = new JobQueue(store, accounts, log, trackLeoAccount);
 jobQueue.on('update', (jobs) => {
   if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send('jobs', jobs);
   // Check deferred logout after job finishes
@@ -355,6 +374,7 @@ ipcMain.handle('storyboard-generate', async (_e, data) => {
 
     if (!imageResult || !imageResult.url) throw new Error('Leonardo tidak menghasilkan gambar');
     log(`[storyboard] Step 2 OK: image generated`);
+    trackLeoAccount('image'); // fire-and-forget tracking
 
     // Download image to temp file for Gemini analysis
     const imgResp = await fetch(imageResult.url);

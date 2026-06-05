@@ -21,11 +21,12 @@ const GRADIENTS = [
 ];
 
 class JobQueue extends EventEmitter {
-  constructor(store, accounts, log) {
+  constructor(store, accounts, log, trackCallback) {
     super();
     this.store = store;
     this.accounts = accounts;   // AccountManager
     this.log = log || (() => {});
+    this.trackCallback = trackCallback || null;
     this.jobs = store.get('jobs') || [];   // newest first
     this.running = 0;
     this._gi = 0;
@@ -176,6 +177,7 @@ class JobQueue extends EventEmitter {
       job.status = 'done'; job.progress = 100; job.file = out; job.url = res.url; job.slot = res.slot;
       job.doneAt = Date.now();
       this.log(`[queue] done ${job.id} (${(buf.length/1048576).toFixed(2)} MB)`);
+      if (this.trackCallback) this.trackCallback('video');
     } catch (e) {
       job.status = 'failed';
       job.reason = /no account|exhausted/i.test(e.message)
