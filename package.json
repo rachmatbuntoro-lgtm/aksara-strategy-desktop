@@ -22,6 +22,7 @@
       "job-queue.js",
       "signup-engine.js",
       "gemini-engine.js",
+      "gemini-api.js",
       "assets/**/*",
       "renderer/**/*",
       "ui/dist/**/*",
