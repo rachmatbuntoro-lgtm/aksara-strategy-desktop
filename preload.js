@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('webkita', {
   getState: () => ipcRenderer.invoke('get-state'),
   activate: (key) => ipcRenderer.invoke('activate', key),
   reset: () => ipcRenderer.invoke('reset'),
+  saveSettings: (data) => ipcRenderer.invoke('save-settings', data),
   // generate now ENQUEUES a job and returns {ok,id}; progress arrives via onJobs.
   generate: (data) => ipcRenderer.invoke('generate', data),
   storyboardGenerate: (data) => ipcRenderer.invoke('storyboard-generate', data),

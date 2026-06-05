@@ -1481,6 +1481,42 @@ function AccountPage({ go, account, logout, logs }) {
           </div>
         )}
       </div>
+
+      {/* Gemini API Key */}
+      <div className="max-w-3xl border border-white/10 bg-white/[.02] p-8 lg:p-10 rounded-[32px] mt-6">
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <span className="text-2xl">🤖</span> Gemini API Key
+        </h3>
+        <p className="text-sm text-white/50 mb-4">
+          API key untuk fitur Storyboard Generator. Gratis daftar di{' '}
+          <a href="https://aistudio.google.com/apikey" target="_blank" className="text-blue-400 underline">Google AI Studio</a>
+        </p>
+        <div className="flex gap-3">
+          <input
+            type="password"
+            placeholder="Masukkan Gemini API Key..."
+            id="gemini-api-key-input"
+            className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30"
+          />
+          <button
+            onClick={async () => {
+              const input = document.getElementById('gemini-api-key-input') as HTMLInputElement;
+              if (!input) return;
+              const key = input.value.trim();
+              if (!key) return;
+              const wk = window.webkita;
+              if (wk) {
+                await wk.saveSettings({ gemini_api_key: key });
+                alert('API Key tersimpan!');
+              }
+            }}
+            className="px-6 py-3 rounded-xl text-sm font-semibold"
+            style={{ background: BRAND.accent, color: '#000' }}
+          >
+            Simpan
+          </button>
+        </div>
+      </div>
     </motion.div>
   );
 }

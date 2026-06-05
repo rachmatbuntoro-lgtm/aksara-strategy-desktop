@@ -5,7 +5,7 @@ const fs = require('fs');
 const { AccountManager } = require('./account-manager.js');
 const { JobQueue } = require('./job-queue.js');
 const { runSignup, refreshToken, setOtpFetcher } = require('./signup-engine.js');
-const { GeminiEngine, getStoryboardPrompt, VIDEO_PROMPT_LOCKED } = require('./gemini-engine.js');
+const { GeminiAPI, getStoryboardPrompt, VIDEO_PROMPT_LOCKED } = require('./gemini-api.js');
 
 // Simple JSON store replacement (no external deps)
 const http = require('http');
@@ -165,6 +165,11 @@ ipcMain.handle('get-state', () => ({
   expires_at: store.get('license_expires') || null,
 }));
 
+ipcMain.handle('save-settings', (_e, data) => {
+  if (data.gemini_api_key !== undefined) store.set('gemini_api_key', data.gemini_api_key);
+  return { ok: true };
+});
+
 ipcMain.handle('activate', async (_e, key) => {
   log('Validasi license...');
 
@@ -191,8 +196,7 @@ ipcMain.handle('activate', async (_e, key) => {
   store.set('license_key', key);
   store.set('canva_invite_url', v.canva_invite_url);
   store.set('license_expires', v.expires_at || null);
-  store.set('gemini_email', v.gemini_email || null);
-  store.set('gemini_password', v.gemini_password || null);
+  store.set('gemini_api_key', v.gemini_api_key || null);
   accounts.setLicense(key, pool);
 
   const entry = pool[0];
@@ -254,20 +258,17 @@ ipcMain.handle('job-retry', (_e, id) => { jobQueue.retry(id); return true; });
 ipcMain.handle('job-remove', (_e, id) => { jobQueue.remove(id); return true; });
 
 // ---- Storyboard Generation ----
-let geminiEngine = null;
+let geminiInstance = null;
 
 function getGemini() {
-  const email = store.get('gemini_email');
-  const password = store.get('gemini_password');
+  const apiKey = store.get('gemini_api_key');
+  if (!apiKey) throw new Error('Gemini API key belum di-set. Masukin di Pengaturan.');
   
-  // Recreate engine if creds changed or engine doesn't exist
-  if (!geminiEngine || geminiEngine.geminiEmail !== email || geminiEngine.geminiPassword !== password) {
-    if (geminiEngine) {
-      try { geminiEngine.close(); } catch {}
-    }
-    geminiEngine = new GeminiEngine(log, { email, password });
+  // Recreate if key changed
+  if (!geminiInstance || geminiInstance.apiKey !== apiKey) {
+    geminiInstance = new GeminiAPI(log, apiKey);
   }
-  return geminiEngine;
+  return geminiInstance;
 }
 
 ipcMain.handle('storyboard-generate', async (_e, data) => {
@@ -277,7 +278,6 @@ ipcMain.handle('storyboard-generate', async (_e, data) => {
 
   const tmpFiles = [];
   try {
-    const gemini = getGemini();
     const path = require('path');
     const os = require('os');
 
@@ -316,17 +316,9 @@ ipcMain.handle('storyboard-generate', async (_e, data) => {
     }
 
     log(`[storyboard] Step 1: Gemini → image prompt (${data.category}/${data.variation})...`);
-    await gemini.init();
+    const gemini = getGemini();
 
-    const fileRefs = [];
-    for (const p of imagePaths) {
-      if (!p) continue;
-      const ref = await gemini.uploadFile(p);
-      fileRefs.push(ref);
-    }
-    if (!fileRefs.length) throw new Error('Tidak ada gambar yang berhasil di-upload');
-
-    const storyboardPrompt = await gemini._sendPrompt(finalPrompt, fileRefs);
+    const storyboardPrompt = await gemini.generate(finalPrompt, imagePaths);
     if (!storyboardPrompt || storyboardPrompt.length < 20) {
       throw new Error('Storyboard prompt terlalu pendek atau kosong');
     }
@@ -352,10 +344,9 @@ ipcMain.handle('storyboard-generate', async (_e, data) => {
     fs.writeFileSync(storyboardImgPath, imgBuf);
     tmpFiles.push(storyboardImgPath);
 
-    // ===== STEP 3: Gemini → video prompt (LOCKED) =====
-    log(`[storyboard] Step 3: Gemini → video prompt (locked)...`);
-    const videoFileRef = await gemini.uploadFile(storyboardImgPath);
-    const videoPrompt = await gemini._sendPrompt(VIDEO_PROMPT_LOCKED, [videoFileRef]);
+    // ===== STEP 3: Gemini → video prompt =====
+    log(`[storyboard] Step 3: Gemini → video prompt...`);
+    const videoPrompt = await gemini.generate(VIDEO_PROMPT_LOCKED, [storyboardImgPath]);
 
     if (!videoPrompt || videoPrompt.length < 20) {
       throw new Error('Video prompt terlalu pendek atau kosong');
@@ -532,9 +523,8 @@ function doLogout(msg) {
   }
 
   // Reset Gemini engine so next use requires fresh login
-  if (geminiEngine) {
-    try { geminiEngine.win?.destroy(); } catch {}
-    geminiEngine = null;
+  if (geminiInstance) {
+    geminiInstance = null;
   }
 
   if (mainWin && !mainWin.isDestroyed()) {
