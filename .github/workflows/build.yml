@@ -62,11 +62,11 @@ jobs:
           node-version: 20
 
       - name: Install backend deps
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Install UI deps
         working-directory: ui
-        run: Remove-Item -Force package-lock.json -ErrorAction SilentlyContinue; npm install
+        run: Remove-Item -Force package-lock.json -ErrorAction SilentlyContinue; npm install --legacy-peer-deps
 
       - name: Build UI
         working-directory: ui

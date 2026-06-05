@@ -29,7 +29,6 @@ import {
   Wand2,
   Zap,
   Copy,
-  Film,
 } from "lucide-react";
 
 const BRAND = {
