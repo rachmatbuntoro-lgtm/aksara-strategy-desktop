@@ -216,7 +216,7 @@ class GeminiEngine {
       show: false,
       width: 800,
       height: 600,
-      alwaysOnTop: true,
+      skipTaskbar: true,
       title: 'Login Google — Aksara Strategy',
       webPreferences: {
         partition: PARTITION,
@@ -240,6 +240,7 @@ class GeminiEngine {
         const loginOk = await this._autoLogin();
         if (!loginOk) {
           this.log('[gemini] Auto-login gagal, buka manual...');
+          this.win.setAlwaysOnTop(true);
           this.win.show();
           const manualOk = await this._waitForLogin(300000);
           if (!manualOk) throw new Error('Login timeout — silakan coba lagi');
