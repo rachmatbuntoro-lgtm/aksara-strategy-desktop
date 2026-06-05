@@ -1150,6 +1150,7 @@ function StoryboardPage({ go, submitStoryboard, studioData, setStudioData, setAc
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Storyboard Generator</h1>
           <p className="text-sm text-white/50 mt-1">Upload gambar produk & model, pilih gaya, dan AI akan membuat prompt storyboard.</p>
+          <p className="text-[11px] text-amber-400/70 mt-1.5 flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400/50"></span>Batas 25 storyboard per hari (reset otomatis setiap hari)</p>
         </div>
       </div>
 
@@ -1487,9 +1488,13 @@ function AccountPage({ go, account, logout, logs }) {
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <span className="text-2xl">🤖</span> Gemini API Key
         </h3>
-        <p className="text-sm text-white/50 mb-4">
+        <p className="text-sm text-white/50 mb-2">
           API key untuk fitur Storyboard Generator. Gratis daftar di{' '}
           <a href="https://aistudio.google.com/apikey" target="_blank" className="text-blue-400 underline">Google AI Studio</a>
+        </p>
+        <p className="text-[11px] text-amber-400/70 mb-4 flex items-center gap-1.5">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400/50"></span>
+          Gratis • Batas 25 storyboard/hari • Reset otomatis setiap hari
         </p>
         <div className="flex gap-3">
           <input
