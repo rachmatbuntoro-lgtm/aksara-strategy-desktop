@@ -197,6 +197,13 @@ ipcMain.handle('activate', async (_e, key) => {
   store.set('canva_invite_url', v.canva_invite_url);
   store.set('license_expires', v.expires_at || null);
   store.set('gemini_api_key', v.gemini_api_key || null);
+  // Store multi-key pool from server (new system)
+  if (Array.isArray(v.gemini_api_keys) && v.gemini_api_keys.length > 0) {
+    store.set('gemini_api_keys', v.gemini_api_keys);
+    log(`[gemini] ${v.gemini_api_keys.length} API key(s) dari server`);
+  } else {
+    store.set('gemini_api_keys', []);
+  }
   accounts.setLicense(key, pool);
 
   const entry = pool[0];
@@ -261,14 +268,26 @@ ipcMain.handle('job-remove', (_e, id) => { jobQueue.remove(id); return true; });
 let geminiInstance = null;
 
 function getGemini() {
-  const apiKey = store.get('gemini_api_key');
-  if (!apiKey) throw new Error('Gemini API key belum di-set. Masukin di Pengaturan.');
-  
-  // Recreate if key changed
-  if (!geminiInstance || geminiInstance.apiKey !== apiKey) {
-    geminiInstance = new GeminiAPI(log, apiKey);
+  const geminiKeys = store.get('gemini_api_keys') || [];
+  const singleKey = store.get('gemini_api_key');
+
+  // Prefer multi-key pool from server, fallback to single key
+  if (geminiKeys.length > 0 || singleKey) {
+    // Recreate if keys changed
+    const keyFingerprint = JSON.stringify(geminiKeys) + '|' + (singleKey || '');
+    if (!geminiInstance || geminiInstance._fingerprint !== keyFingerprint) {
+      geminiInstance = new GeminiAPI(log, {
+        geminiApiKeys: geminiKeys.length > 0 ? geminiKeys : undefined,
+        apiKey: geminiKeys.length === 0 ? singleKey : undefined,
+        licenseKey: store.get('license_key') || '',
+        adminUrl: `http://${LICENSE_API}`,
+      });
+      geminiInstance._fingerprint = keyFingerprint;
+    }
+    return geminiInstance;
   }
-  return geminiInstance;
+
+  throw new Error('Gemini API key belum tersedia. Silakan login ulang atau hubungi admin.');
 }
 
 ipcMain.handle('storyboard-generate', async (_e, data) => {
