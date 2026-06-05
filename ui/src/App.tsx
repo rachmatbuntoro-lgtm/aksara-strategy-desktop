@@ -286,17 +286,18 @@ function LicensePage({ go, error }) {
   
   return (
     <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0, y: -20 }} className="flex flex-col bg-white/[.02] border border-white/10 p-8 lg:p-10 rounded-[32px] shadow-2xl backdrop-blur-md">
-      <div className="flex items-center justify-between mb-10">
-        <Logo className="h-6" />
-        <div className="rounded-full border border-white/10 bg-white/[.04] px-3 py-1.5 text-[11px] font-medium text-white/60">Member Access</div>
+      {/* Big logo */}
+      <div className="flex flex-col items-center mb-8">
+        <Logo className="h-12 max-w-[200px]" />
+        <p className="mt-2 text-[11px] text-white/40">AI Video Suite</p>
       </div>
 
-      <div>
-        <div className="grid h-16 w-16 place-items-center rounded-2xl border border-white/10 bg-white/[.05]">
-          <KeyRound size={28} style={{ color: BRAND.accent }} />
+      <div className="text-center">
+        <div className="grid h-12 w-12 mx-auto place-items-center rounded-2xl border border-white/10 bg-white/[.05]">
+          <KeyRound size={22} style={{ color: BRAND.accent }} />
         </div>
-        <h1 className="mt-6 text-3xl font-semibold tracking-[-0.04em]">Masukkan license key.</h1>
-        <p className="mt-3 text-sm leading-relaxed text-white/58">Gunakan license yang kamu dapat dari Aksara Strategy untuk membuka semua generator video.</p>
+        <h1 className="mt-4 text-2xl font-semibold tracking-[-0.04em]">Masukkan license key.</h1>
+        <p className="mt-2 text-xs leading-relaxed text-white/45">Gunakan license dari Aksara Strategy untuk membuka semua generator video.</p>
       </div>
 
       <div className="mt-10 space-y-3">
