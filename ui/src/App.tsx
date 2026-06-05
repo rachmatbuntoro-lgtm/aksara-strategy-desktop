@@ -404,7 +404,7 @@ function Home({ go, setActiveTool }) {
   );
 }
 
-function UploadCard({ title, subtitle, value, onChange, onClear }) {
+function UploadCard({ title, subtitle, value, onChange, onClear, compact = false }) {
   const inputId = `${title.toLowerCase().split(" ").join("-")}-${subtitle.toLowerCase().split(" ").join("-")}`;
 
   const handleFile = (event) => {
@@ -415,6 +415,43 @@ function UploadCard({ title, subtitle, value, onChange, onClear }) {
     reader.readAsDataURL(file);
     event.target.value = "";
   };
+
+  if (compact) {
+    return (
+      <div className="relative overflow-hidden rounded-2xl border border-dashed border-white/20 bg-black/20 transition hover:bg-white/[.04] hover:border-white/30 active:scale-[.98]">
+        <input id={inputId} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+        {value ? (
+          <>
+            <label htmlFor={inputId} className="cursor-pointer block">
+              <div className="aspect-square overflow-hidden rounded-t-2xl">
+                <img src={value.url} alt={value.name} className="h-full w-full object-cover transition duration-300 hover:scale-105" />
+              </div>
+              <div className="px-3 py-2 bg-black/40">
+                <div className="text-xs font-semibold text-white truncate">{title}</div>
+                <div className="text-[10px] text-white/40 truncate">{value.name}</div>
+              </div>
+            </label>
+            <button
+              type="button"
+              onClick={onClear}
+              className="absolute right-2 top-2 z-20 grid h-6 w-6 place-items-center rounded-full border border-white/20 bg-black/70 text-white backdrop-blur transition hover:bg-red-500/80 hover:border-transparent"
+              title={`Remove ${title}`}
+            >
+              <X size={10} />
+            </button>
+          </>
+        ) : (
+          <label htmlFor={inputId} className="flex aspect-square cursor-pointer flex-col items-center justify-center p-3 text-center group">
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-white/[.05] border border-white/5 group-hover:bg-white/10 transition-colors">
+              <Upload size={16} style={{ color: BRAND.accent }} />
+            </div>
+            <div className="mt-2 text-xs font-semibold text-white/80 group-hover:text-white transition-colors">{title}</div>
+            <div className="mt-0.5 text-[10px] text-white/40">{subtitle}</div>
+          </label>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="relative aspect-square overflow-hidden rounded-[26px] border border-dashed border-white/20 bg-black/20 transition hover:bg-white/[.04] hover:border-white/30 active:scale-[.98]">
@@ -1081,53 +1118,53 @@ function StoryboardPage({ go, submitStoryboard, studioData, setStudioData, setAc
         {/* Left: Image Inputs */}
         <div className="lg:col-span-7 space-y-6">
 
-          {/* Product Image */}
-          <div className="space-y-3">
-            <div className="text-xs font-semibold tracking-wide text-white/50 pl-1">GAMBAR PRODUK *</div>
-            <UploadCard title="Produk" subtitle="Wajib diisi" value={productImg} onChange={setProductImg} onClear={() => setProductImg(null)} />
-          </div>
-
-          {/* Model Image */}
-          <div className="space-y-3">
-            <div className="text-xs font-semibold tracking-wide text-white/50 pl-1">PHOTO MODEL</div>
-            <UploadCard title="Model" subtitle="Opsional — talent visual" value={modelImg} onChange={setModelImg} onClear={() => setModelImg(null)} />
-          </div>
-
-          {/* Lokasi/Background */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between pl-1">
-              <div className="text-xs font-semibold tracking-wide text-white/50">LOKASI / BACKGROUND *</div>
-              <div className="flex rounded-xl overflow-hidden border border-white/10">
-                <button
-                  onClick={() => setBgMode("upload")}
-                  className={`px-3 py-1.5 text-[11px] font-bold transition ${bgMode === "upload" ? "text-[#102027]" : "text-white/40 hover:text-white/60"}`}
-                  style={{ background: bgMode === "upload" ? BRAND.accent : "transparent" }}
-                >
-                  Upload
-                </button>
-                <button
-                  onClick={() => setBgMode("text")}
-                  className={`px-3 py-1.5 text-[11px] font-bold transition ${bgMode === "text" ? "text-[#102027]" : "text-white/40 hover:text-white/60"}`}
-                  style={{ background: bgMode === "text" ? BRAND.accent : "transparent" }}
-                >
-                  Custom Text
-                </button>
-              </div>
+          {/* Upload cards in horizontal row */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <div className="text-[10px] font-semibold tracking-wide text-white/50 pl-1">GAMBAR PRODUK *</div>
+              <UploadCard compact title="Produk" subtitle="Wajib" value={productImg} onChange={setProductImg} onClear={() => setProductImg(null)} />
             </div>
+            <div className="space-y-2">
+              <div className="text-[10px] font-semibold tracking-wide text-white/50 pl-1">PHOTO MODEL</div>
+              <UploadCard compact title="Model" subtitle="Opsional" value={modelImg} onChange={setModelImg} onClear={() => setModelImg(null)} />
+            </div>
+            <div className="space-y-2">
+              <div className="text-[10px] font-semibold tracking-wide text-white/50 pl-1">LOKASI *</div>
+              {bgMode === "upload" ? (
+                <UploadCard compact title="Lokasi" subtitle="Background" value={lokasiImg} onChange={setLokasiImg} onClear={() => setLokasiImg(null)} />
+              ) : (
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                  <textarea
+                    value={bgText}
+                    onChange={(e) => setBgText(e.target.value)}
+                    placeholder="Deskripsi background..."
+                    className="w-full h-20 bg-transparent text-xs leading-relaxed text-white outline-none placeholder:text-white/30 resize-none"
+                  />
+                  <div className="mt-1 text-[10px] text-white/30 text-right">{bgText.length}</div>
+                </div>
+              )}
+            </div>
+          </div>
 
-            {bgMode === "upload" ? (
-              <UploadCard title="Lokasi" subtitle="Gambar background/setting" value={lokasiImg} onChange={setLokasiImg} onClear={() => setLokasiImg(null)} />
-            ) : (
-              <div className="rounded-[26px] border border-white/10 bg-black/20 p-5">
-                <textarea
-                  value={bgText}
-                  onChange={(e) => setBgText(e.target.value)}
-                  placeholder="Contoh: Kafe aesthetic dengan pencahayaan warm, dinding bata merah, tanaman hias di sudut..."
-                  className="w-full h-28 bg-transparent text-sm leading-relaxed text-white outline-none placeholder:text-white/30 resize-none"
-                />
-                <div className="mt-2 text-[10px] text-white/30 text-right">{bgText.length} karakter</div>
-              </div>
-            )}
+          {/* Mode toggle */}
+          <div className="flex items-center justify-end gap-2">
+            <div className="text-[10px] text-white/30">Lokasi:</div>
+            <div className="flex rounded-lg overflow-hidden border border-white/10">
+              <button
+                onClick={() => setBgMode("upload")}
+                className={`px-2.5 py-1 text-[10px] font-bold transition ${bgMode === "upload" ? "text-[#102027]" : "text-white/40 hover:text-white/60"}`}
+                style={{ background: bgMode === "upload" ? BRAND.accent : "transparent" }}
+              >
+                Upload
+              </button>
+              <button
+                onClick={() => setBgMode("text")}
+                className={`px-2.5 py-1 text-[10px] font-bold transition ${bgMode === "text" ? "text-[#102027]" : "text-white/40 hover:text-white/60"}`}
+                style={{ background: bgMode === "text" ? BRAND.accent : "transparent" }}
+              >
+                Text
+              </button>
+            </div>
           </div>
         </div>
 
