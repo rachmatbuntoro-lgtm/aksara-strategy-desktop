@@ -467,6 +467,39 @@ class GeminiEngine {
     } else {
       this.log('[gemini] Auth token extracted: ' + this.authToken.slice(0, 10) + '...');
     }
+
+    // Extract f.sid and bl from page (needed for StreamGenerate URL)
+    try {
+      const sessionData = await this.win.webContents.executeJavaScript(
+        `(function() {
+          try {
+            // f.sid: from AF_initDataCallback or window variable
+            var sid = null;
+            var scripts = document.querySelectorAll('script');
+            for (var s of scripts) {
+              var m = s.textContent.match(/AF_initDataCallback\\({[^}]*data:function\\(\\){return\\s*"([^"]+)"/);
+              if (m) { sid = m[1]; break; }
+              // Alternative: look for window.WIZ_global_data
+              var m2 = s.textContent.match(/"FdrFJe":"([^"]+)"/);
+              if (m2) { sid = m2[1]; break; }
+            }
+            // bl: build label
+            var bl = null;
+            for (var s of scripts) {
+              var m3 = s.textContent.match(/"cfb2h":"([^"]+)"/);
+              if (m3) { bl = m3[1]; break; }
+            }
+            return { sid: sid, bl: bl };
+          } catch (e) { return { sid: null, bl: null }; }
+        })()`
+      );
+      this.fSid = sessionData?.sid || null;
+      this.bl = sessionData?.bl || null;
+      this.log(`[gemini] f.sid: ${this.fSid ? this.fSid.slice(0, 20) + '...' : 'NOT FOUND'}`);
+      this.log(`[gemini] bl: ${this.bl || 'NOT FOUND'}`);
+    } catch (e) {
+      this.log('[gemini] Session data extraction error: ' + e.message);
+    }
   }
 
   _cookieString() {
@@ -565,7 +598,12 @@ class GeminiEngine {
 
     const payload = `f.req=${encodeURIComponent(JSON.stringify([null, JSON.stringify(inner)]))}&at=${encodeURIComponent(this.authToken)}&`;
 
-    const r = await fetch(STREAM_URL, {
+    // Build URL with required query params
+    const reqid = -Math.floor(Math.random() * 900000) - 100000;
+    let streamUrl = STREAM_URL + `?rpcids=Xo0XVd&source-path=%2F&f.sid=${this.fSid || ''}&bl=${this.bl || ''}&hl=en&_reqid=${reqid}&rt=c`;
+
+    this.log(`[gemini] StreamGenerate → ${streamUrl.slice(0, 100)}...`);
+    const r = await fetch(streamUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
