@@ -263,16 +263,16 @@ function DesktopLayout({ screen, go, children, jobs = [], logout, account }) {
 function Splash({ go }) {
   return (
     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center text-center p-8">
-      <div className="mb-8">
-        <Logo className="h-7 mx-auto" />
+      <div className="mb-6">
+        <Logo className="h-16 mx-auto" />
       </div>
-      <h1 className="text-2xl lg:text-3xl font-semibold leading-tight tracking-[-0.04em] max-w-2xl">
+      <h1 className="text-lg lg:text-xl font-semibold leading-tight tracking-[-0.04em] max-w-2xl">
         Generate video AI dalam satu control panel.
       </h1>
-      <p className="mt-5 text-sm leading-relaxed text-white/58 max-w-xl">
+      <p className="mt-4 text-xs leading-relaxed text-white/45 max-w-xl">
         Akses Veo 3.1, Seedance 2, dan Kling AI dengan workflow yang rapi untuk member Aksara Strategy.
       </p>
-      <div className="mt-12 w-full max-w-sm">
+      <div className="mt-10 w-full max-w-sm">
         <PrimaryButton onClick={go} className="w-full justify-center gap-4 py-5 text-base">Masuk ke aplikasi</PrimaryButton>
       </div>
     </motion.div>
@@ -293,10 +293,7 @@ function LicensePage({ go, error }) {
       </div>
 
       <div className="text-center">
-        <div className="grid h-12 w-12 mx-auto place-items-center rounded-2xl border border-white/10 bg-white/[.05]">
-          <KeyRound size={22} style={{ color: BRAND.accent }} />
-        </div>
-        <h1 className="mt-4 text-2xl font-semibold tracking-[-0.04em]">Masukkan license key.</h1>
+        <h1 className="text-2xl font-semibold tracking-[-0.04em]">Masukkan license key.</h1>
         <p className="mt-2 text-xs leading-relaxed text-white/45">Gunakan license dari Aksara Strategy untuk membuka semua generator video.</p>
       </div>
 
