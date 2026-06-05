@@ -80,10 +80,13 @@ async function fetchOtp(key, recipient, attempts = 30) {
   return null;
 }
 
+const LOG_FILE = path.join(app.getPath('userData'), 'aksara-log.txt');
+
 function log(msg) {
   const line = `[${new Date().toTimeString().slice(0, 8)}] ${msg}`;
   if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send('log', line);
   console.log(line);
+  try { fs.appendFileSync(LOG_FILE, line + '\n'); } catch {}
 }
 
 // Wire OTP fetcher into signup engine
