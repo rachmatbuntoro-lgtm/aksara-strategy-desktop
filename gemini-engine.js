@@ -255,6 +255,14 @@ class GeminiEngine {
       }
     }
 
+    // Verify we're on Gemini before extracting session
+    const currentUrl = this.win.webContents.getURL();
+    if (!currentUrl.includes('gemini.google.com')) {
+      this.log('[gemini] Not on Gemini after login, navigating...');
+      await this.win.loadURL(GEMINI_ORIGIN, { userAgent: UA });
+      await sleep(3000);
+    }
+
     // Extract cookies and auth token
     await this._extractSession();
     this.ready = true;
@@ -456,6 +464,8 @@ class GeminiEngine {
     } catch {}
     if (!this.authToken) {
       this.log('[gemini] Warning: auth token tidak ditemukan, akan coba refresh');
+    } else {
+      this.log('[gemini] Auth token extracted: ' + this.authToken.slice(0, 10) + '...');
     }
   }
 
@@ -567,7 +577,11 @@ class GeminiEngine {
       body: payload,
     });
 
-    if (!r.ok) throw new Error(`StreamGenerate failed: ${r.status}`);
+    if (!r.ok) {
+      const errBody = await r.text().catch(() => '');
+      this.log(`[gemini] StreamGenerate ${r.status}: ${errBody.slice(0, 300)}`);
+      throw new Error(`StreamGenerate failed: ${r.status}`);
+    }
 
     const text = await r.text();
     return this._parseResponse(text);
