@@ -277,7 +277,7 @@ class GeminiEngine {
           if (signIn && signIn.offsetParent !== null) return false;
           // Check for user avatar (indicates logged in)
           var avatar = document.querySelector('img[data-src*="googleusercontent"], a[aria-label*="Account"], img[alt*="Profile"]');
-          return !!avatar || !!ta;
+          return !!avatar;
         })()`
       );
       return !!result;
@@ -300,47 +300,49 @@ class GeminiEngine {
       
       // Navigate to Google login
       await wc.loadURL('https://accounts.google.com/signin/v2/identifier?service=acm&flowName=GlifWebSignIn&flowEntry=ServiceLogin&continue=https://gemini.google.com/', { userAgent: UA });
-      await sleep(4000);
+      await sleep(5000);
 
-      // Check if email field exists
-      const hasEmailField = await wc.executeJavaScript(
-        '!!document.querySelector(\'input[type="email"], input#identifierId\')'
-      );
-      if (!hasEmailField) {
+      // Wait for email field with retry
+      let emailFieldReady = false;
+      for (let i = 0; i < 10; i++) {
+        emailFieldReady = await wc.executeJavaScript(
+          '!!document.querySelector(\'input[type="email"], input#identifierId, input[name="identifier"]\')'
+        );
+        if (emailFieldReady) break;
+        await sleep(1000);
+      }
+      if (!emailFieldReady) {
         this.log('[gemini] Auto-login: email field ga ketemu');
         await wc.loadURL(GEMINI_ORIGIN, { userAgent: UA });
         await sleep(2000);
         return false;
       }
 
-      // Click email field first to focus it
+      // Fill email via executeJavaScript (works on hidden windows)
       await wc.executeJavaScript(`
         (function() {
-          var input = document.querySelector('input[type="email"], input#identifierId');
-          if (input) { input.focus(); input.click(); }
+          var input = document.querySelector('input[type="email"], input#identifierId, input[name="identifier"]');
+          if (!input) return false;
+          var nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+          nativeInputValueSetter.call(input, ${JSON.stringify(this.geminiEmail)});
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+          return true;
         })()
       `);
-      await sleep(500);
-
-      // Type email character by character using native input events
-      for (const char of this.geminiEmail) {
-        wc.sendInputEvent({ type: 'char', char });
-        await sleep(30 + Math.random() * 50);
-      }
-      await sleep(800);
+      await sleep(1000);
 
       // Click Next button
       await wc.executeJavaScript(`
         (function() {
           var btn = document.querySelector('#identifierNext');
           if (btn) { btn.click(); return true; }
-          // Fallback: find button with "Next" text
           var btns = document.querySelectorAll('button');
           for (var b of btns) { if (b.textContent.includes('Next') || b.textContent.includes('Berikut')) { b.click(); return true; } }
           return false;
         })()
       `);
-      await sleep(4000);
+      await sleep(5000);
 
       // Check if we hit CAPTCHA or challenge
       const challengeType = await wc.executeJavaScript(`
@@ -361,7 +363,7 @@ class GeminiEngine {
 
       // Wait for password field to appear
       let hasPasswordField = false;
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 15; i++) {
         hasPasswordField = await wc.executeJavaScript(
           '!!document.querySelector(\'input[type="password"], input[name="Passwd"], input[name="password"]\')'
         );
@@ -375,21 +377,19 @@ class GeminiEngine {
         return false;
       }
 
-      // Click password field to focus
+      // Fill password via executeJavaScript
       await wc.executeJavaScript(`
         (function() {
           var input = document.querySelector('input[type="password"], input[name="Passwd"], input[name="password"]');
-          if (input) { input.focus(); input.click(); }
+          if (!input) return false;
+          var nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+          nativeInputValueSetter.call(input, ${JSON.stringify(this.geminiPassword)});
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+          return true;
         })()
       `);
-      await sleep(500);
-
-      // Type password character by character
-      for (const char of this.geminiPassword) {
-        wc.sendInputEvent({ type: 'char', char });
-        await sleep(30 + Math.random() * 50);
-      }
-      await sleep(800);
+      await sleep(1000);
 
       // Click Next/Sign in button
       await wc.executeJavaScript(`
@@ -401,7 +401,7 @@ class GeminiEngine {
           return false;
         })()
       `);
-      await sleep(6000);
+      await sleep(8000);
 
       // Check if redirected to Gemini (success)
       const finalUrl = wc.getURL();

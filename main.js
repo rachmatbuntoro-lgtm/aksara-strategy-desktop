@@ -251,10 +251,16 @@ ipcMain.handle('job-remove', (_e, id) => { jobQueue.remove(id); return true; });
 let geminiEngine = null;
 
 function getGemini() {
-  if (!geminiEngine) geminiEngine = new GeminiEngine(log, {
-    email: store.get('gemini_email'),
-    password: store.get('gemini_password'),
-  });
+  const email = store.get('gemini_email');
+  const password = store.get('gemini_password');
+  
+  // Recreate engine if creds changed or engine doesn't exist
+  if (!geminiEngine || geminiEngine.geminiEmail !== email || geminiEngine.geminiPassword !== password) {
+    if (geminiEngine) {
+      try { geminiEngine.close(); } catch {}
+    }
+    geminiEngine = new GeminiEngine(log, { email, password });
+  }
   return geminiEngine;
 }
 
