@@ -577,52 +577,62 @@ class GeminiEngine {
   }
 
   // Step 3: Send prompt with file references → get AI response
+  // Makes the StreamGenerate call FROM the browser context so cookies/headers are correct.
   async _sendPrompt(prompt, fileRefs = []) {
     if (!this.authToken) await this._refreshAuthToken();
     if (!this.authToken) throw new Error('No auth token — user perlu login ulang');
 
-    // Build the f.req payload (matches capture format)
-    // The payload is a nested array structure matching BardFrontendService/StreamGenerate
+    this.log('[gemini] Sending prompt via browser fetch (' + prompt.length + ' chars, ' + fileRefs.length + ' files)...');
+
+    // Build payload
     const inner = [
       [prompt, 0, null, null, null, null, 0],
       null,
       fileRefs.map(ref => [
         null, null, null, null, null, null, null, null, null,
-        [ref],    // file reference array
+        [ref],
         null, null, null, null, null, null, null, null, null, null,
       ]),
       null, null, null, null, null, null, null, null, null, null, null,
-      [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+      Array(100).fill(null),
       null, null, null, null, null, null, null, null,
     ];
 
     const payload = `f.req=${encodeURIComponent(JSON.stringify([null, JSON.stringify(inner)]))}&at=${encodeURIComponent(this.authToken)}&`;
 
-    // Build URL with required query params
+    // Make the fetch call FROM the browser window context
+    // This ensures cookies, CORS, and all browser security context is correct
     const reqid = -Math.floor(Math.random() * 900000) - 100000;
-    let streamUrl = STREAM_URL + `?rpcids=Xo0XVd&source-path=%2F&f.sid=${this.fSid || ''}&bl=${this.bl || ''}&hl=en&_reqid=${reqid}&rt=c`;
+    const streamUrl = STREAM_URL + `?rpcids=Xo0XVd&source-path=%2F&f.sid=${encodeURIComponent(this.fSid || '')}&bl=${encodeURIComponent(this.bl || '')}&hl=en&_reqid=${reqid}&rt=c`;
 
-    this.log(`[gemini] StreamGenerate → ${streamUrl.slice(0, 100)}...`);
-    const r = await fetch(streamUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-        'Cookie': this._cookieString(),
-        'Origin': GEMINI_ORIGIN,
-        'Referer': GEMINI_ORIGIN + '/',
-        'User-Agent': UA,
-      },
-      body: payload,
-    });
+    this.log(`[gemini] Browser fetch → StreamGenerate...`);
 
-    if (!r.ok) {
-      const errBody = await r.text().catch(() => '');
-      this.log(`[gemini] StreamGenerate ${r.status}: ${errBody.slice(0, 300)}`);
-      throw new Error(`StreamGenerate failed: ${r.status}`);
+    const result = await this.win.webContents.executeJavaScript(`
+      (async function() {
+        try {
+          const r = await fetch(${JSON.stringify(streamUrl)}, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+            },
+            body: ${JSON.stringify(payload)},
+            credentials: 'include',
+          });
+          const text = await r.text();
+          return { ok: r.ok, status: r.status, text: text.slice(0, 50000) };
+        } catch (e) {
+          return { ok: false, status: 0, text: 'fetch error: ' + e.message };
+        }
+      })()
+    `);
+
+    if (!result || !result.ok) {
+      const errText = result?.text || 'no response';
+      this.log(`[gemini] StreamGenerate ${result?.status || 'ERR'}: ${errText.slice(0, 300)}`);
+      throw new Error(`StreamGenerate failed: ${result?.status || 'network error'}`);
     }
 
-    const text = await r.text();
-    return this._parseResponse(text);
+    return this._parseResponse(result.text);
   }
 
   // Parse the streaming JSON response (newline-delimited chunks)
