@@ -297,6 +297,7 @@ class GeminiAPI {
         try {
           const text = await callFn(prompt, imageParts, keyObj);
           this.log(`[ai-api] Success via ${keyObj.label || 'key'}: ${text.length} chars`);
+          this.log(`[ai-api] Response preview: ${text.slice(0, 200)}`);
           this._report(keyObj.id, true);
           return text;
         } catch (err) {
