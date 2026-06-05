@@ -90,7 +90,7 @@ function Logo({ className = "h-6" }) {
   );
 }
 
-function PrimaryButton({ children, onClick, icon: Icon = ArrowRight, disabled = false, className = "" }) {
+function PrimaryButton({ children, onClick, icon: Icon = ArrowRight, disabled = false, className = "", loading = false }) {
   return (
     <button
       onClick={onClick}
@@ -100,7 +100,16 @@ function PrimaryButton({ children, onClick, icon: Icon = ArrowRight, disabled = 
     >
       <span>{children}</span>
       <span className="grid h-8 w-8 place-items-center rounded-full bg-black/10 transition group-hover:translate-x-0.5">
-        <Icon size={18} />
+        {loading ? (
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          >
+            <Loader2 size={18} />
+          </motion.div>
+        ) : (
+          <Icon size={18} />
+        )}
       </span>
     </button>
   );
@@ -755,7 +764,7 @@ function StudioPage({ activeTool, setActiveTool, go, studioData, setStudioData, 
             <div className="rounded-2xl border border-red-400/20 bg-red-400/[.07] p-4 text-sm leading-relaxed text-red-100/80">{errMsg}</div>
           )}
           
-          <PrimaryButton icon={Play} onClick={handleGenerate} disabled={busy || !currentData.prompt.trim()} className="w-full py-5 text-base shadow-lg shadow-sky-900/20">
+          <PrimaryButton icon={Play} loading={busy} onClick={handleGenerate} disabled={busy || !currentData.prompt.trim()} className="w-full py-5 text-base shadow-lg shadow-sky-900/20">
             {busy ? "Mengirim ke Server..." : "Generate Video Sekarang"}
           </PrimaryButton>
         </div>
@@ -1321,6 +1330,7 @@ function StoryboardPage({ go, submitStoryboard, studioData, setStudioData, setAc
 
           <PrimaryButton
             icon={Sparkles}
+            loading={busy}
             onClick={handleGenerate}
             disabled={!canGenerate || busy}
             className="w-full py-5 text-base shadow-lg shadow-sky-900/20"
