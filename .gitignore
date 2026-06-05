@@ -5,3 +5,4 @@ ui/dist/
 release/
 *.log
 .DS_Store
+licenses.db
