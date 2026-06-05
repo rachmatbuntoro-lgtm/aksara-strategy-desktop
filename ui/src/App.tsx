@@ -154,7 +154,7 @@ function Sidebar({ active, go, jobs = [], logout, account }) {
     <div className="w-72 h-full border-r border-white/10 bg-[#12181b]/80 backdrop-blur-3xl flex flex-col relative z-30">
       <div className="p-8">
         <Logo className="h-6" />
-        <div className="mt-2 text-[10px] font-semibold tracking-[0.15em] text-white/40 uppercase pl-1">AI Video Suite</div>
+        <div className="mt-2 text-[10px] font-semibold tracking-[0.15em] text-white/40 uppercase pl-1">Creative Studio</div>
       </div>
       
       <div className="flex-1 px-4 space-y-2 mt-4">
@@ -289,7 +289,7 @@ function LicensePage({ go, error }) {
       {/* Big logo */}
       <div className="flex flex-col items-center mb-8">
         <Logo className="h-12 max-w-[200px]" />
-        <p className="mt-2 text-[11px] text-white/40">AI Video Suite</p>
+        <p className="mt-2 text-[11px] text-white/40">Creative Studio</p>
       </div>
 
       <div className="text-center">
@@ -348,12 +348,9 @@ function Home({ go, setActiveTool }) {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="h-full">
       <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <Logo className="h-8" />
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Dashboard Overview</h1>
-            <p className="text-sm text-white/50 mt-1">Pilih engine dan mulai generate video.</p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Dashboard Overview</h1>
+          <p className="text-sm text-white/50 mt-1">Pilih engine dan mulai generate video.</p>
         </div>
         <div className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-medium text-emerald-300">
           Member Aktif
@@ -363,15 +360,12 @@ function Home({ go, setActiveTool }) {
       <div className="overflow-hidden rounded-[32px] border border-white/10 bg-white/[.03] p-8 lg:p-10 relative mb-10">
         <div className="flex items-start justify-between gap-6 relative z-10">
           <div className="max-w-xl">
-            <div className="rounded-full inline-block border border-white/10 bg-black/30 px-4 py-1.5 text-xs font-medium text-white/70 mb-5">AI Video Suite</div>
+            <div className="rounded-full inline-block border border-white/10 bg-black/30 px-4 py-1.5 text-xs font-medium text-white/70 mb-5">Creative Studio</div>
             <h2 className="text-4xl font-semibold leading-tight tracking-[-0.03em]">Satu workspace pintar untuk semua engine AI.</h2>
             <p className="mt-5 text-base leading-relaxed text-white/60">Pilih model AI di Studio, atur frame dan prompt, lalu pantau hasil render paralel melalui fitur Queue.</p>
             <div className="mt-8">
               <PrimaryButton onClick={() => go("studio")} icon={Layers3} className="w-max px-8">Go To Studio</PrimaryButton>
             </div>
-          </div>
-          <div className="hidden md:grid h-24 w-24 shrink-0 place-items-center rounded-[28px] shadow-2xl" style={{ background: BRAND.depth }}>
-            <Film size={40} style={{ color: BRAND.accent }} />
           </div>
         </div>
         <div className="absolute right-0 bottom-0 w-64 h-64 bg-white/5 blur-[80px] rounded-full translate-x-1/3 translate-y-1/3 pointer-events-none" />
@@ -386,9 +380,9 @@ function Home({ go, setActiveTool }) {
         {tools.map((tool) => {
           const Icon = tool.icon;
           return (
-            <div key={tool.id} className="group rounded-[28px] border border-white/10 bg-black/20 p-6 text-left transition-all hover:bg-white/[.05] hover:border-white/20">
+            <div key={tool.id} className="rounded-[28px] border border-white/10 bg-black/20 p-6 text-left">
               <div className="flex items-start justify-between mb-4">
-                <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/[.05] group-hover:bg-white/10 transition-colors">
+                <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/[.05]">
                   <Icon size={24} style={{ color: BRAND.accent }} />
                 </div>
                 <span className="rounded-full px-3 py-1.5 text-[10px] font-bold tracking-wide uppercase" style={{ background: "rgba(181,204,210,.14)", color: BRAND.accent }}>
