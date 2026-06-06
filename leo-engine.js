@@ -213,7 +213,8 @@ class LeoEngine {
 
   // Generate an image. Returns generationId.
   async generateImage(prompt, { ratio = '1:1', quality = 'HIGH', promptEnhance = true,
-                                   styleIds = [], publicGen = true, quantity = 1 } = {}) {
+                                   styleIds = [], publicGen = true, quantity = 1,
+                                   refImageId = null, refStrength = null } = {}) {
     const spec = IMAGE_MODELS['gpt-image-2'];
     if (!spec.ratios.includes(ratio)) throw new Error(`gpt-image-2 ratios ${spec.ratios}, got ${ratio}`);
     const params = {
@@ -224,6 +225,15 @@ class LeoEngine {
       quantity,
     };
     if (styleIds.length) params.styleIds = styleIds;
+
+    // Image reference (img2img) — use uploaded image as visual reference
+    if (refImageId) {
+      const ref = { image: { id: refImageId, type: 'UPLOADED' } };
+      // gpt-image-2: no strength param; gpt-image-1.5: strength LOW/MID/HIGH
+      if (refStrength) ref.strength = refStrength;
+      params.guidances = { image_reference: [ref] };
+    }
+
     const d = await this.gql('Generate', Q_GENERATE, { request: { model: spec.id, public: publicGen, parameters: params } });
     return d.generate.generationId;
   }

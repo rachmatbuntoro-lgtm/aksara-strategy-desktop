@@ -155,8 +155,27 @@ class AccountManager {
     throw new NoAccountsLeft('exhausted all rotations');
   }
 
+  // Upload a reference image to Leonardo for img2img guidance.
+  // Accepts file path or Buffer. Returns initImageId (UUID string).
+  async uploadRefImage(imagePathOrBuffer, onEvent) {
+    const eng = await this.engine(onEvent);
+    const fs = require('fs');
+    let bytes, ext;
+    if (typeof imagePathOrBuffer === 'string') {
+      ext = (imagePathOrBuffer.split('.').pop() || 'jpg').toLowerCase();
+      bytes = fs.readFileSync(imagePathOrBuffer);
+    } else {
+      bytes = imagePathOrBuffer;
+      ext = 'jpg';
+    }
+    if (onEvent) onEvent('uploading_ref', {});
+    const initImageId = await eng.uploadImage(bytes, ext);
+    if (onEvent) onEvent('ref_uploaded', { initImageId });
+    return initImageId;
+  }
+
   // Image generation — same rotation logic as makeVideo.
-  // job = { prompt, ratio, quality, promptEnhance }
+  // job = { prompt, ratio, quality, promptEnhance, refImageId, refStrength }
   // Returns { url, slot }.
   async makeImage(job, onEvent) {
     const { eng, gid, slot } = await this._withLock(() => this._submitImage(job, onEvent));
@@ -192,6 +211,8 @@ class AccountManager {
           ratio: job.ratio || '1:1',
           quality: job.quality || 'HIGH',
           promptEnhance: job.promptEnhance !== false,
+          refImageId: job.refImageId || null,
+          refStrength: job.refStrength || null,
         });
         return { eng, gid, slot: this._state().active };
       } catch (e) {

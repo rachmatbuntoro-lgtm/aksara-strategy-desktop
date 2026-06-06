@@ -365,8 +365,24 @@ ipcMain.handle('storyboard-generate', async (_e, data) => {
 
     // ===== STEP 2: Leonardo → generate storyboard image =====
     log(`[storyboard] Step 2: Leonardo → generate image...`);
+
+    // Upload lokasi image as reference for background consistency (img2img)
+    let refImageId = null;
+    if (lokasiPath) {
+      try {
+        log(`[storyboard] Uploading lokasi as image reference...`);
+        refImageId = await accounts.uploadRefImage(lokasiPath, (s, i) => {
+          if (s === 'rotate') log(`[storyboard] ${i.reason} — rotasi akun...`);
+        });
+        log(`[storyboard] Reference image uploaded: ${refImageId}`);
+      } catch (refErr) {
+        log(`[storyboard] Ref upload failed (continuing without): ${refErr.message}`);
+      }
+    }
+
     const imageResult = await accounts.makeImage(
-      { prompt: storyboardPrompt, ratio: '16:9', quality: 'HIGH', promptEnhance: false },
+      { prompt: storyboardPrompt, ratio: '16:9', quality: 'HIGH', promptEnhance: false,
+        refImageId: refImageId },
       (s, i) => {
         if (s === 'rotate') log(`[storyboard] ${i.reason} — rotasi akun...`);
         else if (s === 'generating') log(`[storyboard] Generating image slot ${i.slot}...`);
