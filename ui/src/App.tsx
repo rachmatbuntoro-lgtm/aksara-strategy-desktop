@@ -1084,8 +1084,8 @@ function PhotoEditorPage({ go }) {
   const [modelOpen, setModelOpen] = useState(false);
 
   const models = [
-    { id: "gpt-image-2", name: "GPT Image 2", desc: "OpenAI DALL-E based — photorealistic, detail tinggi", badge: "Premium", icon: Sparkles },
-    { id: "nano-banana-2", name: "NanoBanana 2", desc: "Gemini 2.5 Flash — cepat, editing presisi, reference kuat", badge: "Fast", icon: Wand2 },
+    { id: "gpt-image-2", name: "GPT Image 2", desc: "Photorealistic, detail tinggi", badge: "Premium", icon: Sparkles },
+    { id: "nano-banana-2", name: "NanoBanana 2", desc: "Cepat, editing presisi", badge: "Fast", icon: Wand2 },
   ];
   const selectedModel = models.find(m => m.id === model) || models[0];
   const ratios = ["2:3", "1:1", "16:9", "9:16"];
@@ -1136,131 +1136,97 @@ function PhotoEditorPage({ go }) {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-8">
-      {/* Header with back button */}
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="h-full">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Photo Editor</h1>
           <p className="text-sm text-white/50 mt-1">Generate gambar dengan AI — pilih model, rasio, dan jumlah output.</p>
         </div>
-        <button onClick={() => go("home")} className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 text-sm hover:bg-white/10 hover:text-white transition-colors flex items-center gap-2">
-          <ArrowLeft size={16} />
-          Kembali
-        </button>
       </div>
 
-      {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pb-10">
 
-        {/* Left Column: Model, Prompt, Settings */}
+        {/* LEFT: Model, Prompt, Settings, Results */}
         <div className="lg:col-span-7 space-y-6">
 
-          {/* Model Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setModelOpen(v => !v)}
-              className="w-full rounded-[28px] border border-white/10 bg-white/[.02] p-5 text-left transition hover:bg-white/[.04] hover:border-white/20"
-            >
-              <div className="flex items-center gap-5">
-                <div className="grid h-14 w-14 place-items-center rounded-[20px] shadow-inner" style={{ background: BRAND.depth }}>
-                  <selectedModel.icon size={24} style={{ color: BRAND.accent }} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[11px] font-bold tracking-wider text-white/40 uppercase mb-1">MODEL AKTIF</div>
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-xl font-semibold tracking-tight">{selectedModel.name}</h2>
-                    <span className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide" style={{ background: "rgba(181,204,210,.14)", color: BRAND.accent }}>{selectedModel.badge}</span>
-                  </div>
-                  <p className="mt-1.5 text-sm text-white/50">{selectedModel.desc}</p>
-                </div>
-                <motion.div animate={{ rotate: modelOpen ? 180 : 0 }} className="h-10 w-10 grid place-items-center rounded-full bg-white/5">
-                  <ChevronDown size={20} className="text-white/60" />
-                </motion.div>
-              </div>
-            </button>
-
-            <AnimatePresence>
-              {modelOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -10, scale: 0.98 }}
-                  className="absolute left-0 right-0 top-[calc(100%+12px)] z-50 overflow-hidden rounded-[28px] border border-white/10 bg-[#121A1F]/95 p-3 shadow-2xl backdrop-blur-2xl"
-                >
-                  {models.map((m) => {
-                    const isActive = m.id === model;
-                    return (
-                      <button
-                        key={m.id}
-                        onClick={() => { setModel(m.id); setModelOpen(false); }}
-                        className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left transition hover:bg-white/[.06]"
-                        style={{ background: isActive ? "rgba(181,204,210,.1)" : "transparent" }}
-                      >
-                        <div className="grid h-12 w-12 place-items-center rounded-xl bg-white/[.05]">
-                          <m.icon size={20} style={{ color: BRAND.accent }} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-base font-semibold">{m.name}</div>
-                          <div className="mt-1 text-xs text-white/50">{m.desc}</div>
-                        </div>
-                        {isActive && <CheckCircle2 size={20} style={{ color: BRAND.accent }} />}
-                      </button>
-                    );
-                  })}
-                </motion.div>
-              )}
-            </AnimatePresence>
+          {/* Model Selector — compact like category card */}
+          <div className="relative space-y-3 bg-white/[.02] border border-white/5 p-6 rounded-[28px]">
+            <div className="text-xs font-semibold tracking-wide text-white/50">MODEL</div>
+            <div className="grid grid-cols-2 gap-3">
+              {models.map((m) => {
+                const sel = model === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => setModel(m.id)}
+                    className="rounded-2xl border p-4 text-left transition-all active:scale-95"
+                    style={{
+                      borderColor: sel ? BRAND.accent : "rgba(255,255,255,.1)",
+                      background: sel ? "rgba(181,204,210,.1)" : "rgba(0,0,0,.2)",
+                    }}
+                  >
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <div className="grid h-8 w-8 place-items-center rounded-lg bg-white/[.05]">
+                        <m.icon size={16} style={{ color: sel ? BRAND.accent : "rgba(255,255,255,.5)" }} />
+                      </div>
+                      <div className="text-sm font-semibold" style={{ color: sel ? BRAND.accent : "rgba(255,255,255,.6)" }}>{m.name}</div>
+                    </div>
+                    <div className="text-xs text-white/40">{m.desc}</div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Prompt */}
           <div className="space-y-3">
             <div className="flex items-center justify-between pl-1">
               <div className="text-xs font-semibold tracking-wide text-white/50">PROMPT</div>
-              <div className="text-xs font-medium text-white/40 bg-white/5 px-2 py-1 rounded-md">{prompt.length}</div>
+              <div className="text-xs font-medium text-white/40 bg-white/5 px-2 py-1 rounded-md">{prompt.length} / 2000</div>
             </div>
             <textarea
               value={prompt}
               maxLength={2000}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Deskripsikan gambar yang ingin di-generate. Jelaskan detail visual, subjek, komposisi, lighting, mood, dan gaya."
-              className="h-[200px] w-full resize-none rounded-[28px] border border-white/10 bg-black/30 p-6 text-base leading-relaxed text-white outline-none placeholder:text-white/30 focus:border-white/30 transition-colors shadow-inner"
+              className="h-[280px] w-full resize-none rounded-[28px] border border-white/10 bg-black/30 p-6 text-base leading-relaxed text-white outline-none placeholder:text-white/30 focus:border-white/30 transition-colors shadow-inner"
             />
           </div>
 
           {/* Ratio & Quantity */}
           <div className="grid grid-cols-2 gap-6 bg-white/[.02] border border-white/5 p-6 rounded-[28px]">
-            <div>
-              <div className="text-xs font-semibold tracking-wide text-white/50 mb-3">RASIO</div>
-              <div className="flex gap-2">
+            <div className="space-y-3">
+              <div className="text-xs font-semibold tracking-wide text-white/50">RASIO</div>
+              <div className="grid grid-cols-2 gap-2">
                 {ratios.map((r) => (
                   <button
                     key={r}
                     onClick={() => setRatio(r)}
-                    className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-                      ratio === r
-                        ? "text-[#102027]"
-                        : "bg-white/5 text-white/60 border border-white/10 hover:bg-white/10"
-                    }`}
-                    style={{ background: ratio === r ? BRAND.accent : undefined }}
+                    className="rounded-xl border px-3 py-2.5 text-xs font-semibold text-center transition-all"
+                    style={{
+                      borderColor: ratio === r ? BRAND.accent : "rgba(255,255,255,.1)",
+                      background: ratio === r ? "rgba(181,204,210,.1)" : "rgba(0,0,0,.2)",
+                      color: ratio === r ? BRAND.accent : "rgba(255,255,255,.6)",
+                    }}
                   >
                     {r}
                   </button>
                 ))}
               </div>
             </div>
-            <div>
-              <div className="text-xs font-semibold tracking-wide text-white/50 mb-3">JUMLAH OUTPUT</div>
-              <div className="flex gap-2">
+            <div className="space-y-3">
+              <div className="text-xs font-semibold tracking-wide text-white/50">JUMLAH OUTPUT</div>
+              <div className="grid grid-cols-4 gap-2">
                 {quantities.map((q) => (
                   <button
                     key={q}
                     onClick={() => setQuantity(q)}
-                    className={`w-11 h-11 rounded-xl text-sm font-semibold transition-all ${
-                      quantity === q
-                        ? "text-[#102027]"
-                        : "bg-white/5 text-white/60 border border-white/10 hover:bg-white/10"
-                    }`}
-                    style={{ background: quantity === q ? BRAND.accent : undefined }}
+                    className="rounded-xl border px-3 py-2.5 text-xs font-semibold text-center transition-all"
+                    style={{
+                      borderColor: quantity === q ? BRAND.accent : "rgba(255,255,255,.1)",
+                      background: quantity === q ? "rgba(181,204,210,.1)" : "rgba(0,0,0,.2)",
+                      color: quantity === q ? BRAND.accent : "rgba(255,255,255,.6)",
+                    }}
                   >
                     {q}
                   </button>
@@ -1268,20 +1234,42 @@ function PhotoEditorPage({ go }) {
               </div>
             </div>
           </div>
+
+          {/* Results — inline below settings */}
+          {results.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-4"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <CheckCircle2 size={18} style={{ color: BRAND.accent }} />
+                <h2 className="text-lg font-semibold">Hasil Generate</h2>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {results.map((url, idx) => (
+                  <div key={idx} className="rounded-2xl border border-white/10 bg-black/20 overflow-hidden relative group">
+                    <img src={url} alt={`Result ${idx + 1}`} className="w-full object-contain max-h-[300px]" />
+                    <a
+                      href={url}
+                      download
+                      className="absolute bottom-2 right-2 h-10 w-10 grid place-items-center rounded-xl bg-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <Download size={16} />
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
         </div>
 
-        {/* Right Column: Ref Images, Generate, Results */}
+        {/* RIGHT: Ref Images, Info, Generate */}
         <div className="lg:col-span-5 space-y-6">
 
           {/* Reference Images */}
-          <div className="rounded-[28px] border border-white/5 bg-white/[.02] p-6">
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <div className="text-xs font-semibold tracking-wide text-white/50">GAMBAR REFERENSI</div>
-                <div className="mt-1.5 text-xs text-white/40">Opsional, max 4 gambar</div>
-              </div>
-              <div className="h-10 w-10 rounded-full bg-white/5 grid place-items-center"><ImagePlus size={18} style={{ color: BRAND.accent }} /></div>
-            </div>
+          <div className="space-y-3 bg-white/[.02] border border-white/5 p-6 rounded-[28px]">
+            <div className="text-xs font-semibold tracking-wide text-white/50">GAMBAR REFERENSI</div>
             <div className="grid grid-cols-4 gap-3">
               {refImages.map((img, idx) => (
                 <div key={idx} className="relative">
@@ -1308,56 +1296,30 @@ function PhotoEditorPage({ go }) {
             </div>
           </div>
 
-          {/* Generate Button */}
-          <button
-            onClick={handleGenerate}
-            disabled={busy || !prompt.trim()}
-            className="w-full rounded-[28px] py-5 text-base font-semibold transition active:scale-[.99] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-            style={{ background: BRAND.accent, color: '#102027' }}
-          >
-            {busy ? (
-              <>
-                <Loader2 size={20} className="animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles size={20} />
-                Generate
-              </>
-            )}
-          </button>
+          {/* Info box */}
+          <div className="rounded-[28px] border border-emerald-400/20 bg-emerald-400/5 p-6 text-sm text-emerald-100/70 leading-relaxed">
+            <div className="flex items-start gap-4">
+              <Clock3 size={20} className="shrink-0 text-emerald-400 mt-0.5" />
+              <p>Gambar referensi akan digunakan sebagai guidance untuk menghasilkan gambar yang konsisten.</p>
+            </div>
+          </div>
 
-          {/* Error */}
           {error && (
-            <div className="rounded-[20px] border border-red-400/20 bg-red-400/5 p-5 text-red-300/80 text-sm">
-              {error}
-            </div>
+            <div className="rounded-2xl border border-red-400/20 bg-red-400/[.07] p-4 text-sm leading-relaxed text-red-100/80">{error}</div>
           )}
 
-          {/* Results */}
-          {results.length > 0 && (
-            <div className="rounded-[28px] border border-white/5 bg-white/[.02] p-6">
-              <div className="text-xs font-semibold tracking-wide text-white/50 mb-4">HASIL</div>
-              <div className="grid grid-cols-2 gap-3">
-                {results.map((url, idx) => (
-                  <div key={idx} className="rounded-xl overflow-hidden border border-white/10 relative group">
-                    <img src={url} alt={`Result ${idx + 1}`} className="w-full h-auto" />
-                    <a
-                      href={url}
-                      download
-                      className="absolute bottom-2 right-2 h-8 w-8 rounded-lg bg-black/70 text-white/80 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Download size={14} />
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <PrimaryButton
+            icon={Sparkles}
+            loading={busy}
+            onClick={handleGenerate}
+            disabled={!prompt.trim() || busy}
+            className="w-full py-5 text-base shadow-lg shadow-sky-900/20"
+          >
+            {busy ? "AI Generating..." : "Generate"}
+          </PrimaryButton>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
