@@ -1136,31 +1136,44 @@ function PhotoEditorPage({ go }) {
 
   return (
     <div className="flex-1 overflow-y-auto p-8">
-      <h1 className="text-3xl font-semibold tracking-tight">Photo Editor</h1>
-      <p className="text-white/50 text-sm mt-1">Generate gambar dengan AI — pilih model, rasio, dan jumlah output.</p>
-
-      <div className="mt-8 max-w-2xl space-y-6">
-        {/* Model Dropdown */}
+      {/* Header with back button */}
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <label className="text-sm font-medium text-white/70 mb-2 block">Model</label>
+          <h1 className="text-3xl font-semibold tracking-tight">Photo Editor</h1>
+          <p className="text-sm text-white/50 mt-1">Generate gambar dengan AI — pilih model, rasio, dan jumlah output.</p>
+        </div>
+        <button onClick={() => go("home")} className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 text-sm hover:bg-white/10 hover:text-white transition-colors flex items-center gap-2">
+          <ArrowLeft size={16} />
+          Kembali
+        </button>
+      </div>
+
+      {/* Two-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pb-10">
+
+        {/* Left Column: Model, Prompt, Settings */}
+        <div className="lg:col-span-7 space-y-6">
+
+          {/* Model Dropdown */}
           <div className="relative">
             <button
               onClick={() => setModelOpen(v => !v)}
-              className="w-full rounded-2xl border border-white/10 bg-white/[.02] p-4 text-left transition hover:bg-white/[.04] hover:border-white/20"
+              className="w-full rounded-[28px] border border-white/10 bg-white/[.02] p-5 text-left transition hover:bg-white/[.04] hover:border-white/20"
             >
-              <div className="flex items-center gap-4">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/[.05]">
-                  <selectedModel.icon size={20} className="text-white/60" />
+              <div className="flex items-center gap-5">
+                <div className="grid h-14 w-14 place-items-center rounded-[20px] shadow-inner" style={{ background: BRAND.depth }}>
+                  <selectedModel.icon size={24} style={{ color: BRAND.accent }} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold">{selectedModel.name}</span>
-                    <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-white/10 text-white/50">{selectedModel.badge}</span>
+                  <div className="text-[11px] font-bold tracking-wider text-white/40 uppercase mb-1">MODEL AKTIF</div>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-semibold tracking-tight">{selectedModel.name}</h2>
+                    <span className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide" style={{ background: "rgba(181,204,210,.14)", color: BRAND.accent }}>{selectedModel.badge}</span>
                   </div>
-                  <p className="text-xs text-white/40 mt-0.5">{selectedModel.desc}</p>
+                  <p className="mt-1.5 text-sm text-white/50">{selectedModel.desc}</p>
                 </div>
-                <motion.div animate={{ rotate: modelOpen ? 180 : 0 }}>
-                  <ChevronDown size={18} className="text-white/40" />
+                <motion.div animate={{ rotate: modelOpen ? 180 : 0 }} className="h-10 w-10 grid place-items-center rounded-full bg-white/5">
+                  <ChevronDown size={20} className="text-white/60" />
                 </motion.div>
               </div>
             </button>
@@ -1168,10 +1181,10 @@ function PhotoEditorPage({ go }) {
             <AnimatePresence>
               {modelOpen && (
                 <motion.div
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-white/10 bg-[#121A1F]/95 p-2 shadow-2xl backdrop-blur-2xl"
+                  initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.98 }}
+                  className="absolute left-0 right-0 top-[calc(100%+12px)] z-50 overflow-hidden rounded-[28px] border border-white/10 bg-[#121A1F]/95 p-3 shadow-2xl backdrop-blur-2xl"
                 >
                   {models.map((m) => {
                     const isActive = m.id === model;
@@ -1179,17 +1192,17 @@ function PhotoEditorPage({ go }) {
                       <button
                         key={m.id}
                         onClick={() => { setModel(m.id); setModelOpen(false); }}
-                        className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-white/[.06]"
+                        className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left transition hover:bg-white/[.06]"
                         style={{ background: isActive ? "rgba(181,204,210,.1)" : "transparent" }}
                       >
-                        <div className="grid h-9 w-9 place-items-center rounded-lg bg-white/[.05]">
-                          <m.icon size={18} className="text-white/60" />
+                        <div className="grid h-12 w-12 place-items-center rounded-xl bg-white/[.05]">
+                          <m.icon size={20} style={{ color: BRAND.accent }} />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="text-sm font-semibold">{m.name}</div>
-                          <div className="text-[11px] text-white/40">{m.desc}</div>
+                          <div className="text-base font-semibold">{m.name}</div>
+                          <div className="mt-1 text-xs text-white/50">{m.desc}</div>
                         </div>
-                        {isActive && <CheckCircle2 size={18} className="text-white/60" />}
+                        {isActive && <CheckCircle2 size={20} style={{ color: BRAND.accent }} />}
                       </button>
                     );
                   })}
@@ -1197,134 +1210,151 @@ function PhotoEditorPage({ go }) {
               )}
             </AnimatePresence>
           </div>
-        </div>
 
-        {/* Reference Images (4 slots) */}
-        <div>
-          <label className="text-sm font-medium text-white/70 mb-2 block">Gambar Referensi <span className="text-white/40">(opsional, max 4)</span></label>
-          <div className="grid grid-cols-4 gap-3">
-            {refImages.map((img, idx) => (
-              <div key={idx} className="relative">
-                {img ? (
-                  <div className="relative aspect-square rounded-xl overflow-hidden border border-white/10 group">
-                    <img src={img.url} alt={`Ref ${idx + 1}`} className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => removeRef(idx)}
-                      className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/70 text-white/80 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X size={12} />
-                    </button>
-                    <div className="absolute bottom-0 inset-x-0 bg-black/50 text-[10px] text-white/70 text-center py-0.5 truncate px-1">{img.name}</div>
-                  </div>
-                ) : (
-                  <label className="flex flex-col items-center justify-center aspect-square rounded-xl border border-dashed border-white/15 bg-white/[.02] cursor-pointer hover:bg-white/[.04] hover:border-white/25 transition-all">
-                    <Upload size={20} className="text-white/30 mb-1" />
-                    <span className="text-[10px] text-white/30">Ref {idx + 1}</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={handleFile(idx)} />
-                  </label>
-                )}
-              </div>
-            ))}
+          {/* Prompt */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between pl-1">
+              <div className="text-xs font-semibold tracking-wide text-white/50">PROMPT</div>
+              <div className="text-xs font-medium text-white/40 bg-white/5 px-2 py-1 rounded-md">{prompt.length}</div>
+            </div>
+            <textarea
+              value={prompt}
+              maxLength={2000}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Deskripsikan gambar yang ingin di-generate. Jelaskan detail visual, subjek, komposisi, lighting, mood, dan gaya."
+              className="h-[200px] w-full resize-none rounded-[28px] border border-white/10 bg-black/30 p-6 text-base leading-relaxed text-white outline-none placeholder:text-white/30 focus:border-white/30 transition-colors shadow-inner"
+            />
           </div>
-        </div>
 
-        {/* Prompt */}
-        <div>
-          <label className="text-sm font-medium text-white/70 mb-2 block">Prompt</label>
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Deskripsikan gambar yang ingin di-generate..."
-            className="w-full h-28 bg-white/5 border border-white/10 rounded-xl p-4 text-white text-sm placeholder:text-white/30 resize-none focus:outline-none focus:border-white/30 transition-colors"
-          />
-        </div>
-
-        {/* Ratio */}
-        <div>
-          <label className="text-sm font-medium text-white/70 mb-2 block">Rasio</label>
-          <div className="flex gap-2">
-            {ratios.map((r) => (
-              <button
-                key={r}
-                onClick={() => setRatio(r)}
-                className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${
-                  ratio === r
-                    ? "bg-white text-black"
-                    : "bg-white/5 text-white/60 border border-white/10 hover:bg-white/10"
-                }`}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Quantity */}
-        <div>
-          <label className="text-sm font-medium text-white/70 mb-2 block">Jumlah Output</label>
-          <div className="flex gap-2">
-            {quantities.map((q) => (
-              <button
-                key={q}
-                onClick={() => setQuantity(q)}
-                className={`w-11 h-11 rounded-xl text-sm font-medium transition-all ${
-                  quantity === q
-                    ? "bg-white text-black"
-                    : "bg-white/5 text-white/60 border border-white/10 hover:bg-white/10"
-                }`}
-              >
-                {q}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Generate Button */}
-        <button
-          onClick={handleGenerate}
-          disabled={busy || !prompt.trim()}
-          className="w-full py-3.5 rounded-xl font-semibold text-sm bg-white text-black hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-        >
-          {busy ? (
-            <>
-              <Loader2 size={18} className="animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <Sparkles size={18} />
-              Generate
-            </>
-          )}
-        </button>
-
-        {/* Error */}
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm">
-            {error}
-          </div>
-        )}
-
-        {/* Results */}
-        {results.length > 0 && (
-          <div className="mt-4">
-            <h2 className="text-lg font-semibold mb-3">Hasil</h2>
-            <div className="grid grid-cols-2 gap-3">
-              {results.map((url, idx) => (
-                <div key={idx} className="rounded-xl overflow-hidden border border-white/10 relative group">
-                  <img src={url} alt={`Result ${idx + 1}`} className="w-full h-auto" />
-                  <a
-                    href={url}
-                    download
-                    className="absolute bottom-2 right-2 h-8 w-8 rounded-lg bg-black/70 text-white/80 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity"
+          {/* Ratio & Quantity */}
+          <div className="grid grid-cols-2 gap-6 bg-white/[.02] border border-white/5 p-6 rounded-[28px]">
+            <div>
+              <div className="text-xs font-semibold tracking-wide text-white/50 mb-3">RASIO</div>
+              <div className="flex gap-2">
+                {ratios.map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setRatio(r)}
+                    className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                      ratio === r
+                        ? "text-[#102027]"
+                        : "bg-white/5 text-white/60 border border-white/10 hover:bg-white/10"
+                    }`}
+                    style={{ background: ratio === r ? BRAND.accent : undefined }}
                   >
-                    <Download size={14} />
-                  </a>
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs font-semibold tracking-wide text-white/50 mb-3">JUMLAH OUTPUT</div>
+              <div className="flex gap-2">
+                {quantities.map((q) => (
+                  <button
+                    key={q}
+                    onClick={() => setQuantity(q)}
+                    className={`w-11 h-11 rounded-xl text-sm font-semibold transition-all ${
+                      quantity === q
+                        ? "text-[#102027]"
+                        : "bg-white/5 text-white/60 border border-white/10 hover:bg-white/10"
+                    }`}
+                    style={{ background: quantity === q ? BRAND.accent : undefined }}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Ref Images, Generate, Results */}
+        <div className="lg:col-span-5 space-y-6">
+
+          {/* Reference Images */}
+          <div className="rounded-[28px] border border-white/5 bg-white/[.02] p-6">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <div className="text-xs font-semibold tracking-wide text-white/50">GAMBAR REFERENSI</div>
+                <div className="mt-1.5 text-xs text-white/40">Opsional, max 4 gambar</div>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-white/5 grid place-items-center"><ImagePlus size={18} style={{ color: BRAND.accent }} /></div>
+            </div>
+            <div className="grid grid-cols-4 gap-3">
+              {refImages.map((img, idx) => (
+                <div key={idx} className="relative">
+                  {img ? (
+                    <div className="relative aspect-square rounded-xl overflow-hidden border border-white/10 group">
+                      <img src={img.url} alt={`Ref ${idx + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => removeRef(idx)}
+                        className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/70 text-white/80 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={12} />
+                      </button>
+                      <div className="absolute bottom-0 inset-x-0 bg-black/50 text-[10px] text-white/70 text-center py-0.5 truncate px-1">{img.name}</div>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center aspect-square rounded-xl border border-dashed border-white/15 bg-white/[.02] cursor-pointer hover:bg-white/[.04] hover:border-white/25 transition-all">
+                      <Upload size={18} className="text-white/30 mb-1" />
+                      <span className="text-[10px] text-white/30">Ref {idx + 1}</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleFile(idx)} />
+                    </label>
+                  )}
                 </div>
               ))}
             </div>
           </div>
-        )}
+
+          {/* Generate Button */}
+          <button
+            onClick={handleGenerate}
+            disabled={busy || !prompt.trim()}
+            className="w-full rounded-[28px] py-5 text-base font-semibold transition active:scale-[.99] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            style={{ background: BRAND.accent, color: '#102027' }}
+          >
+            {busy ? (
+              <>
+                <Loader2 size={20} className="animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles size={20} />
+                Generate
+              </>
+            )}
+          </button>
+
+          {/* Error */}
+          {error && (
+            <div className="rounded-[20px] border border-red-400/20 bg-red-400/5 p-5 text-red-300/80 text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* Results */}
+          {results.length > 0 && (
+            <div className="rounded-[28px] border border-white/5 bg-white/[.02] p-6">
+              <div className="text-xs font-semibold tracking-wide text-white/50 mb-4">HASIL</div>
+              <div className="grid grid-cols-2 gap-3">
+                {results.map((url, idx) => (
+                  <div key={idx} className="rounded-xl overflow-hidden border border-white/10 relative group">
+                    <img src={url} alt={`Result ${idx + 1}`} className="w-full h-auto" />
+                    <a
+                      href={url}
+                      download
+                      className="absolute bottom-2 right-2 h-8 w-8 rounded-lg bg-black/70 text-white/80 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Download size={14} />
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
