@@ -226,7 +226,7 @@ function Sidebar({ active, go, jobs = [], logout, account }) {
 }
 
 function DesktopLayout({ screen, go, children, jobs = [], logout, account }) {
-  const isAuth = ["home", "studio", "storyboard", "queue", "account"].includes(screen);
+  const isAuth = ["home", "studio", "photo-editor", "storyboard", "queue", "account"].includes(screen);
 
   return (
     <div className="flex h-screen w-full bg-neutral-950 text-white font-sans overflow-hidden">
@@ -1146,126 +1146,8 @@ function PhotoEditorPage({ go }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pb-10">
 
-        {/* LEFT: Model, Prompt, Settings, Results */}
+        {/* LEFT: Ref Images, Prompt, Settings, Results */}
         <div className="lg:col-span-7 space-y-6">
-
-          {/* Model Selector — compact like category card */}
-          <div className="relative space-y-3 bg-white/[.02] border border-white/5 p-6 rounded-[28px]">
-            <div className="text-xs font-semibold tracking-wide text-white/50">MODEL</div>
-            <div className="grid grid-cols-2 gap-3">
-              {models.map((m) => {
-                const sel = model === m.id;
-                return (
-                  <button
-                    key={m.id}
-                    onClick={() => setModel(m.id)}
-                    className="rounded-2xl border p-4 text-left transition-all active:scale-95"
-                    style={{
-                      borderColor: sel ? BRAND.accent : "rgba(255,255,255,.1)",
-                      background: sel ? "rgba(181,204,210,.1)" : "rgba(0,0,0,.2)",
-                    }}
-                  >
-                    <div className="flex items-center gap-3 mb-1.5">
-                      <div className="grid h-8 w-8 place-items-center rounded-lg bg-white/[.05]">
-                        <m.icon size={16} style={{ color: sel ? BRAND.accent : "rgba(255,255,255,.5)" }} />
-                      </div>
-                      <div className="text-sm font-semibold" style={{ color: sel ? BRAND.accent : "rgba(255,255,255,.6)" }}>{m.name}</div>
-                    </div>
-                    <div className="text-xs text-white/40">{m.desc}</div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Prompt */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between pl-1">
-              <div className="text-xs font-semibold tracking-wide text-white/50">PROMPT</div>
-              <div className="text-xs font-medium text-white/40 bg-white/5 px-2 py-1 rounded-md">{prompt.length} / 2000</div>
-            </div>
-            <textarea
-              value={prompt}
-              maxLength={2000}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Deskripsikan gambar yang ingin di-generate. Jelaskan detail visual, subjek, komposisi, lighting, mood, dan gaya."
-              className="h-[280px] w-full resize-none rounded-[28px] border border-white/10 bg-black/30 p-6 text-base leading-relaxed text-white outline-none placeholder:text-white/30 focus:border-white/30 transition-colors shadow-inner"
-            />
-          </div>
-
-          {/* Ratio & Quantity */}
-          <div className="grid grid-cols-2 gap-6 bg-white/[.02] border border-white/5 p-6 rounded-[28px]">
-            <div className="space-y-3">
-              <div className="text-xs font-semibold tracking-wide text-white/50">RASIO</div>
-              <div className="grid grid-cols-2 gap-2">
-                {ratios.map((r) => (
-                  <button
-                    key={r}
-                    onClick={() => setRatio(r)}
-                    className="rounded-xl border px-3 py-2.5 text-xs font-semibold text-center transition-all"
-                    style={{
-                      borderColor: ratio === r ? BRAND.accent : "rgba(255,255,255,.1)",
-                      background: ratio === r ? "rgba(181,204,210,.1)" : "rgba(0,0,0,.2)",
-                      color: ratio === r ? BRAND.accent : "rgba(255,255,255,.6)",
-                    }}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="text-xs font-semibold tracking-wide text-white/50">JUMLAH OUTPUT</div>
-              <div className="grid grid-cols-4 gap-2">
-                {quantities.map((q) => (
-                  <button
-                    key={q}
-                    onClick={() => setQuantity(q)}
-                    className="rounded-xl border px-3 py-2.5 text-xs font-semibold text-center transition-all"
-                    style={{
-                      borderColor: quantity === q ? BRAND.accent : "rgba(255,255,255,.1)",
-                      background: quantity === q ? "rgba(181,204,210,.1)" : "rgba(0,0,0,.2)",
-                      color: quantity === q ? BRAND.accent : "rgba(255,255,255,.6)",
-                    }}
-                  >
-                    {q}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Results — inline below settings */}
-          {results.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-4"
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <CheckCircle2 size={18} style={{ color: BRAND.accent }} />
-                <h2 className="text-lg font-semibold">Hasil Generate</h2>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {results.map((url, idx) => (
-                  <div key={idx} className="rounded-2xl border border-white/10 bg-black/20 overflow-hidden relative group">
-                    <img src={url} alt={`Result ${idx + 1}`} className="w-full object-contain max-h-[300px]" />
-                    <a
-                      href={url}
-                      download
-                      className="absolute bottom-2 right-2 h-10 w-10 grid place-items-center rounded-xl bg-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
-                    >
-                      <Download size={16} />
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </div>
-
-        {/* RIGHT: Ref Images, Info, Generate */}
-        <div className="lg:col-span-5 space-y-6">
 
           {/* Reference Images */}
           <div className="space-y-3 bg-white/[.02] border border-white/5 p-6 rounded-[28px]">
@@ -1293,6 +1175,118 @@ function PhotoEditorPage({ go }) {
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Prompt */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between pl-1">
+              <div className="text-xs font-semibold tracking-wide text-white/50">PROMPT</div>
+              <div className="text-xs font-medium text-white/40 bg-white/5 px-2 py-1 rounded-md">{prompt.length} / 2000</div>
+            </div>
+            <textarea
+              value={prompt}
+              maxLength={2000}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Deskripsikan gambar yang ingin di-generate. Jelaskan detail visual, subjek, komposisi, lighting, mood, dan gaya."
+              className="h-[280px] w-full resize-none rounded-[28px] border border-white/10 bg-black/30 p-6 text-base leading-relaxed text-white outline-none placeholder:text-white/30 focus:border-white/30 transition-colors shadow-inner"
+            />
+          </div>
+
+          {/* Ratio & Quantity — same grid style */}
+          <div className="space-y-3 bg-white/[.02] border border-white/5 p-6 rounded-[28px]">
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <div className="text-xs font-semibold tracking-wide text-white/50">RASIO</div>
+                <div className="grid grid-cols-4 gap-2">
+                  {ratios.map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => setRatio(r)}
+                      className="rounded-xl border px-3 py-2.5 text-xs font-semibold text-center transition-all"
+                      style={{
+                        borderColor: ratio === r ? BRAND.accent : "rgba(255,255,255,.1)",
+                        background: ratio === r ? "rgba(181,204,210,.1)" : "rgba(0,0,0,.2)",
+                        color: ratio === r ? BRAND.accent : "rgba(255,255,255,.6)",
+                      }}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="text-xs font-semibold tracking-wide text-white/50">JUMLAH OUTPUT</div>
+                <div className="grid grid-cols-4 gap-2">
+                  {quantities.map((q) => (
+                    <button
+                      key={q}
+                      onClick={() => setQuantity(q)}
+                      className="rounded-xl border px-3 py-2.5 text-xs font-semibold text-center transition-all"
+                      style={{
+                        borderColor: quantity === q ? BRAND.accent : "rgba(255,255,255,.1)",
+                        background: quantity === q ? "rgba(181,204,210,.1)" : "rgba(0,0,0,.2)",
+                        color: quantity === q ? BRAND.accent : "rgba(255,255,255,.6)",
+                      }}
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Results */}
+          {results.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+              <div className="flex items-center gap-3 mb-2">
+                <CheckCircle2 size={18} style={{ color: BRAND.accent }} />
+                <h2 className="text-lg font-semibold">Hasil Generate</h2>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {results.map((url, idx) => (
+                  <div key={idx} className="rounded-2xl border border-white/10 bg-black/20 overflow-hidden relative group">
+                    <img src={url} alt={`Result ${idx + 1}`} className="w-full object-contain max-h-[300px]" />
+                    <a href={url} download className="absolute bottom-2 right-2 h-10 w-10 grid place-items-center rounded-xl bg-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-colors opacity-0 group-hover:opacity-100">
+                      <Download size={16} />
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </div>
+
+        {/* RIGHT: Model, Info, Generate */}
+        <div className="lg:col-span-5 space-y-6">
+
+          {/* Model Selector */}
+          <div className="space-y-3 bg-white/[.02] border border-white/5 p-6 rounded-[28px]">
+            <div className="text-xs font-semibold tracking-wide text-white/50">MODEL</div>
+            <div className="grid grid-cols-2 gap-3">
+              {models.map((m) => {
+                const sel = model === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => setModel(m.id)}
+                    className="rounded-2xl border p-4 text-left transition-all active:scale-95"
+                    style={{
+                      borderColor: sel ? BRAND.accent : "rgba(255,255,255,.1)",
+                      background: sel ? "rgba(181,204,210,.1)" : "rgba(0,0,0,.2)",
+                    }}
+                  >
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <div className="grid h-8 w-8 place-items-center rounded-lg bg-white/[.05]">
+                        <m.icon size={16} style={{ color: sel ? BRAND.accent : "rgba(255,255,255,.5)" }} />
+                      </div>
+                      <div className="text-sm font-semibold" style={{ color: sel ? BRAND.accent : "rgba(255,255,255,.6)" }}>{m.name}</div>
+                    </div>
+                    <div className="text-xs text-white/40">{m.desc}</div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -1329,6 +1323,7 @@ function StoryboardPage({ go, submitStoryboard, studioData, setStudioData, setAc
   const [lokasiImg, setLokasiImg] = useState(null);
   const [bgMode, setBgMode] = useState("upload"); // "upload" | "text"
   const [bgText, setBgText] = useState("");
+  const [brief, setBrief] = useState("");
   const [category, setCategory] = useState("ugc");
   const [variation, setVariation] = useState("dialog");
   const [busy, setBusy] = useState(false);
@@ -1381,6 +1376,7 @@ function StoryboardPage({ go, submitStoryboard, studioData, setStudioData, setAc
         modelImg,
         lokasiImg: bgMode === "upload" ? lokasiImg : null,
         bgText: bgMode === "text" ? bgText.trim() : null,
+        brief: brief.trim() || null,
         category,
         variation,
       });
@@ -1459,6 +1455,18 @@ function StoryboardPage({ go, submitStoryboard, studioData, setStudioData, setAc
                 Text
               </button>
             </div>
+          </div>
+
+          {/* Brief / Alur Cerita */}
+          <div className="space-y-2">
+            <div className="text-[10px] font-semibold tracking-wide text-white/50 pl-1">ALUR CERITA (opsional)</div>
+            <textarea
+              value={brief}
+              onChange={(e) => setBrief(e.target.value)}
+              placeholder='Contoh: "Perempuan dapet hadiah skincare, kaget buka box, pakai di cermin, hasilnya glowing"'
+              className="h-20 w-full resize-none rounded-2xl border border-white/10 bg-black/20 p-4 text-xs leading-relaxed text-white outline-none placeholder:text-white/30 focus:border-white/25 transition-colors"
+            />
+            <div className="text-[10px] text-white/30 text-right pr-1">{brief.length}</div>
           </div>
 
           {/* Results Panel - inline below upload */}
