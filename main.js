@@ -347,21 +347,45 @@ ipcMain.handle('storyboard-generate', async (_e, data) => {
     const layoutRefPath = path.join(__dirname, 'assets', 'storyboard-layout-ref.png');
     if (fs.existsSync(layoutRefPath)) imagePaths.push(layoutRefPath);
 
-    // ===== STEP 1: Gemini → storyboard image prompt =====
+    // ===== STEP 1: MiMo → combined prompt (image + video) =====
     const systemPrompt = getStoryboardPrompt(data.category, data.variation);
-    let finalPrompt = systemPrompt;
+    let finalPrompt = systemPrompt.replace('{brief}', data.brief || 'AUTO');
     if (data.bgText) {
-      finalPrompt += `\n\nBackground/Lokasi : ${data.bgText}`;
+      finalPrompt += `\n\nAdditional background info: ${data.bgText}`;
     }
 
-    log(`[storyboard] Step 1: Gemini → image prompt (${data.category}/${data.variation})...`);
+    log(`[storyboard] Step 1: AI → combined prompt (${data.category}/${data.variation})...`);
     const gemini = getGemini();
 
-    const storyboardPrompt = await gemini.generate(finalPrompt, imagePaths);
-    if (!storyboardPrompt || storyboardPrompt.length < 20) {
-      throw new Error('Storyboard prompt terlalu pendek atau kosong');
+    const combinedOutput = await gemini.generate(finalPrompt, imagePaths);
+    if (!combinedOutput || combinedOutput.length < 20) {
+      throw new Error('AI prompt terlalu pendek atau kosong');
     }
-    log(`[storyboard] Step 1 OK: prompt ${storyboardPrompt.length} chars`);
+
+    // Parse combined output: ---IMAGE_PROMPT--- and ---VIDEO_PROMPT---
+    let storyboardPrompt = '';
+    let videoPrompt = '';
+    const imageMatch = combinedOutput.match(/---IMAGE_PROMPT---\s*([\s\S]*?)(?=---VIDEO_PROMPT---|$)/i);
+    const videoMatch = combinedOutput.match(/---VIDEO_PROMPT---\s*([\s\S]*?)$/i);
+
+    if (imageMatch && imageMatch[1]) {
+      storyboardPrompt = imageMatch[1].trim();
+    }
+    if (videoMatch && videoMatch[1]) {
+      videoPrompt = videoMatch[1].trim();
+    }
+
+    // Fallback: if parsing failed, use entire output as image prompt
+    if (!storyboardPrompt) {
+      storyboardPrompt = combinedOutput.trim();
+      log(`[storyboard] WARNING: Could not parse IMAGE_PROMPT, using full output`);
+    }
+
+    if (!videoPrompt) {
+      log(`[storyboard] WARNING: No VIDEO_PROMPT parsed, will generate after image`);
+    }
+
+    log(`[storyboard] Step 1 OK: image prompt ${storyboardPrompt.length} chars, video prompt ${videoPrompt.length} chars`);
 
     // ===== STEP 2: Leonardo → generate storyboard image =====
     log(`[storyboard] Step 2: Leonardo → generate image...`);
@@ -400,21 +424,18 @@ ipcMain.handle('storyboard-generate', async (_e, data) => {
     fs.writeFileSync(storyboardImgPath, imgBuf);
     tmpFiles.push(storyboardImgPath);
 
-    // ===== STEP 3: AI → video prompt =====
-    log(`[storyboard] Step 3: AI → video prompt...`);
-    let videoPrompt = '';
-    try {
-      videoPrompt = await gemini.generate(VIDEO_PROMPT_LOCKED, [storyboardImgPath]);
-    } catch (vpErr) {
-      log(`[storyboard] Step 3 FAILED: ${vpErr.message}`);
-      // Fallback: generate basic video prompt without image analysis
-      videoPrompt = `Cinematic video of: ${storyboardPrompt.slice(0, 150)}. Camera slowly pans right, soft natural lighting, shallow depth of field, 8 seconds.`;
-      log(`[storyboard] Step 3 fallback prompt used`);
-    }
-
+    // ===== STEP 3: Video prompt (from combined output or fallback) =====
     if (!videoPrompt || videoPrompt.length < 20) {
-      videoPrompt = `Cinematic video of: ${storyboardPrompt.slice(0, 150)}. Camera slowly pans right, soft natural lighting, shallow depth of field, 8 seconds.`;
-      log(`[storyboard] Step 3 prompt too short, using fallback`);
+      log(`[storyboard] Step 3: Generating video prompt from image...`);
+      try {
+        videoPrompt = await gemini.generate(VIDEO_PROMPT_LOCKED, [storyboardImgPath]);
+      } catch (vpErr) {
+        log(`[storyboard] Step 3 FAILED: ${vpErr.message}`);
+        videoPrompt = `Cinematic video of: ${storyboardPrompt.slice(0, 150)}. Camera slowly pans right, soft natural lighting, shallow depth of field, 10 seconds.`;
+      }
+      if (!videoPrompt || videoPrompt.length < 20) {
+        videoPrompt = `Cinematic video of: ${storyboardPrompt.slice(0, 150)}. Camera slowly pans right, soft natural lighting, shallow depth of field, 10 seconds.`;
+      }
     }
     log(`[storyboard] Step 3 OK: video prompt ${videoPrompt.length} chars`);
 
