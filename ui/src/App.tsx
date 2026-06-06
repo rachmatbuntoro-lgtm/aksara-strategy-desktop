@@ -1076,31 +1076,54 @@ function PhotoEditorPage({ go }) {
   const [model, setModel] = useState("gpt-image-2");
   const [ratio, setRatio] = useState("1:1");
   const [quantity, setQuantity] = useState(1);
+  const [refImages, setRefImages] = useState([null, null, null, null]);
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState(null);
+  const [results, setResults] = useState([]);
   const [error, setError] = useState("");
+  const [modelOpen, setModelOpen] = useState(false);
 
   const models = [
-    { id: "gpt-image-2", label: "GPT Image 2" },
-    { id: "nano-banana-2", label: "NanoBanana 2" },
+    { id: "gpt-image-2", name: "GPT Image 2", desc: "OpenAI DALL-E based — photorealistic, detail tinggi", badge: "Premium", icon: Sparkles },
+    { id: "nano-banana-2", name: "NanoBanana 2", desc: "Gemini 2.5 Flash — cepat, editing presisi, reference kuat", badge: "Fast", icon: Wand2 },
   ];
+  const selectedModel = models.find(m => m.id === model) || models[0];
   const ratios = ["2:3", "1:1", "16:9", "9:16"];
   const quantities = [1, 2, 3, 4];
+
+  const handleFile = (idx) => (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const newRefs = [...refImages];
+      newRefs[idx] = { name: file.name, url: reader.result };
+      setRefImages(newRefs);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const removeRef = (idx) => {
+    const newRefs = [...refImages];
+    newRefs[idx] = null;
+    setRefImages(newRefs);
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
     setBusy(true);
     setError("");
-    setResult(null);
+    setResults([]);
     try {
       const res = await window.webkita.photoEditorGenerate({
         prompt: prompt.trim(),
         model,
         ratio,
         quantity,
+        refImages: refImages.filter(Boolean),
       });
       if (res.ok) {
-        setResult(res.url);
+        setResults(res.urls || [res.url]);
       } else {
         setError(res.reason || "Gagal generate");
       }
@@ -1117,6 +1140,94 @@ function PhotoEditorPage({ go }) {
       <p className="text-white/50 text-sm mt-1">Generate gambar dengan AI — pilih model, rasio, dan jumlah output.</p>
 
       <div className="mt-8 max-w-2xl space-y-6">
+        {/* Model Dropdown */}
+        <div>
+          <label className="text-sm font-medium text-white/70 mb-2 block">Model</label>
+          <div className="relative">
+            <button
+              onClick={() => setModelOpen(v => !v)}
+              className="w-full rounded-2xl border border-white/10 bg-white/[.02] p-4 text-left transition hover:bg-white/[.04] hover:border-white/20"
+            >
+              <div className="flex items-center gap-4">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/[.05]">
+                  <selectedModel.icon size={20} className="text-white/60" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold">{selectedModel.name}</span>
+                    <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-white/10 text-white/50">{selectedModel.badge}</span>
+                  </div>
+                  <p className="text-xs text-white/40 mt-0.5">{selectedModel.desc}</p>
+                </div>
+                <motion.div animate={{ rotate: modelOpen ? 180 : 0 }}>
+                  <ChevronDown size={18} className="text-white/40" />
+                </motion.div>
+              </div>
+            </button>
+
+            <AnimatePresence>
+              {modelOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-white/10 bg-[#121A1F]/95 p-2 shadow-2xl backdrop-blur-2xl"
+                >
+                  {models.map((m) => {
+                    const isActive = m.id === model;
+                    return (
+                      <button
+                        key={m.id}
+                        onClick={() => { setModel(m.id); setModelOpen(false); }}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-white/[.06]"
+                        style={{ background: isActive ? "rgba(181,204,210,.1)" : "transparent" }}
+                      >
+                        <div className="grid h-9 w-9 place-items-center rounded-lg bg-white/[.05]">
+                          <m.icon size={18} className="text-white/60" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-semibold">{m.name}</div>
+                          <div className="text-[11px] text-white/40">{m.desc}</div>
+                        </div>
+                        {isActive && <CheckCircle2 size={18} className="text-white/60" />}
+                      </button>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Reference Images (4 slots) */}
+        <div>
+          <label className="text-sm font-medium text-white/70 mb-2 block">Gambar Referensi <span className="text-white/40">(opsional, max 4)</span></label>
+          <div className="grid grid-cols-4 gap-3">
+            {refImages.map((img, idx) => (
+              <div key={idx} className="relative">
+                {img ? (
+                  <div className="relative aspect-square rounded-xl overflow-hidden border border-white/10 group">
+                    <img src={img.url} alt={`Ref ${idx + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => removeRef(idx)}
+                      className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/70 text-white/80 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X size={12} />
+                    </button>
+                    <div className="absolute bottom-0 inset-x-0 bg-black/50 text-[10px] text-white/70 text-center py-0.5 truncate px-1">{img.name}</div>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center aspect-square rounded-xl border border-dashed border-white/15 bg-white/[.02] cursor-pointer hover:bg-white/[.04] hover:border-white/25 transition-all">
+                    <Upload size={20} className="text-white/30 mb-1" />
+                    <span className="text-[10px] text-white/30">Ref {idx + 1}</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={handleFile(idx)} />
+                  </label>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Prompt */}
         <div>
           <label className="text-sm font-medium text-white/70 mb-2 block">Prompt</label>
@@ -1124,39 +1235,19 @@ function PhotoEditorPage({ go }) {
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="Deskripsikan gambar yang ingin di-generate..."
-            className="w-full h-32 bg-white/5 border border-white/10 rounded-xl p-4 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-white/30 transition-colors"
+            className="w-full h-28 bg-white/5 border border-white/10 rounded-xl p-4 text-white text-sm placeholder:text-white/30 resize-none focus:outline-none focus:border-white/30 transition-colors"
           />
-        </div>
-
-        {/* Model */}
-        <div>
-          <label className="text-sm font-medium text-white/70 mb-2 block">Model</label>
-          <div className="flex gap-3">
-            {models.map((m) => (
-              <button
-                key={m.id}
-                onClick={() => setModel(m.id)}
-                className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  model === m.id
-                    ? "bg-white text-black"
-                    : "bg-white/5 text-white/60 border border-white/10 hover:bg-white/10"
-                }`}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Ratio */}
         <div>
           <label className="text-sm font-medium text-white/70 mb-2 block">Rasio</label>
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             {ratios.map((r) => (
               <button
                 key={r}
                 onClick={() => setRatio(r)}
-                className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${
                   ratio === r
                     ? "bg-white text-black"
                     : "bg-white/5 text-white/60 border border-white/10 hover:bg-white/10"
@@ -1171,12 +1262,12 @@ function PhotoEditorPage({ go }) {
         {/* Quantity */}
         <div>
           <label className="text-sm font-medium text-white/70 mb-2 block">Jumlah Output</label>
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             {quantities.map((q) => (
               <button
                 key={q}
                 onClick={() => setQuantity(q)}
-                className={`w-12 h-12 rounded-xl text-sm font-medium transition-all ${
+                className={`w-11 h-11 rounded-xl text-sm font-medium transition-all ${
                   quantity === q
                     ? "bg-white text-black"
                     : "bg-white/5 text-white/60 border border-white/10 hover:bg-white/10"
@@ -1214,21 +1305,24 @@ function PhotoEditorPage({ go }) {
           </div>
         )}
 
-        {/* Result */}
-        {result && (
+        {/* Results */}
+        {results.length > 0 && (
           <div className="mt-4">
             <h2 className="text-lg font-semibold mb-3">Hasil</h2>
-            <div className="rounded-xl overflow-hidden border border-white/10">
-              <img src={result} alt="Generated" className="w-full h-auto" />
+            <div className="grid grid-cols-2 gap-3">
+              {results.map((url, idx) => (
+                <div key={idx} className="rounded-xl overflow-hidden border border-white/10 relative group">
+                  <img src={url} alt={`Result ${idx + 1}`} className="w-full h-auto" />
+                  <a
+                    href={url}
+                    download
+                    className="absolute bottom-2 right-2 h-8 w-8 rounded-lg bg-black/70 text-white/80 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Download size={14} />
+                  </a>
+                </div>
+              ))}
             </div>
-            <a
-              href={result}
-              download
-              className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 hover:text-white text-sm transition-all"
-            >
-              <Download size={16} />
-              Download
-            </a>
           </div>
         )}
       </div>
@@ -1758,7 +1852,7 @@ export default function App() {
   };
 
   const goBottomNav = (target) => {
-    if (["home", "studio", "storyboard", "queue", "account"].includes(target)) setScreen(target);
+    if (["home", "studio", "photo-editor", "storyboard", "queue", "account"].includes(target)) setScreen(target);
   };
 
   const logout = async () => {

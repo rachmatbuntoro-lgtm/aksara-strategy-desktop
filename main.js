@@ -469,23 +469,49 @@ ipcMain.handle('storyboard-generate', async (_e, data) => {
 
 // ---- PHOTO EDITOR ----
 ipcMain.handle('photo-editor-generate', async (_e, data) => {
-  // data: { prompt, model, ratio, quantity }
+  // data: { prompt, model, ratio, quantity, refImages: [{name, url}] }
   if (!store.get('leo_uid')) return { ok: false, reason: 'Belum ada akun aktif.' };
   if (!data.prompt) return { ok: false, reason: 'Prompt kosong' };
 
+  const tmpFiles = [];
   try {
     log(`[photo-editor] Generate: model=${data.model}, ratio=${data.ratio}, qty=${data.quantity}`);
     log(`[photo-editor] Prompt: ${data.prompt.slice(0, 100)}...`);
 
+    // Upload ref images to Leonardo if provided
+    let refImageId = null;
+    if (data.refImages && data.refImages.length > 0) {
+      const refImg = data.refImages[0]; // use first ref image
+      const val = typeof refImg === 'string' ? refImg : refImg.url;
+      if (val && val.startsWith('data:')) {
+        const m = /^data:([^;]+);base64,(.*)$/s.exec(val);
+        if (m) {
+          const ext = m[1].split('/')[1] || 'png';
+          const tmpPath = path.join(os.tmpdir(), `pe-ref-${Date.now()}.${ext}`);
+          fs.writeFileSync(tmpPath, Buffer.from(m[2], 'base64'));
+          tmpFiles.push(tmpPath);
+          try {
+            refImageId = await accounts.uploadRefImage(tmpPath);
+            log(`[photo-editor] Ref image uploaded: ${refImageId}`);
+          } catch (refErr) {
+            log(`[photo-editor] Ref upload failed (non-fatal): ${refErr.message}`);
+          }
+        }
+      }
+    }
+
     const result = await accounts.makeImage(
       { prompt: data.prompt, ratio: data.ratio || '1:1', quality: 'HIGH',
         promptEnhance: false, model: data.model || 'gpt-image-2',
-        quantity: data.quantity || 1 },
+        quantity: data.quantity || 1, refImageId },
       (s, i) => {
         if (s === 'rotate') log(`[photo-editor] ${i.reason} — rotasi akun...`);
         else if (s === 'generating') log(`[photo-editor] Generating slot ${i.slot}...`);
       }
     );
+
+    // Cleanup tmp files
+    tmpFiles.forEach(p => { try { fs.unlinkSync(p); } catch {} });
 
     if (!result || !result.url) throw new Error('Leonardo tidak menghasilkan gambar');
     log(`[photo-editor] OK: ${result.url}`);
@@ -502,6 +528,7 @@ ipcMain.handle('photo-editor-generate', async (_e, data) => {
 
     return { ok: true, url: result.url };
   } catch (e) {
+    tmpFiles.forEach(p => { try { fs.unlinkSync(p); } catch {} });
     log('[photo-editor] FAILED: ' + e.message);
     return { ok: false, reason: e.message };
   }
