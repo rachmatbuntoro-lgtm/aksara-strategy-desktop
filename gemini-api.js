@@ -46,13 +46,16 @@ RULES:
 - Match the model appearance from Image 2 (clothing, hair, skin tone)
 - 16:9 horizontal composition
 - UGC style: casual, relatable, phone-camera feel, natural lighting
+- IMAGE_PROMPT must be in English (for Leonardo AI)
+- VIDEO_PROMPT must be in Bahasa Indonesia (dialog/narasi untuk video)
+- VIDEO_PROMPT: sertakan dialog yang diucapkan oleh orang di video (apa yang dia katakan ke kamera)
 
 OUTPUT FORMAT (strict):
 ---IMAGE_PROMPT---
 [150-250 word image prompt. Start with background description from Image 3, then describe subject, action, expression, lighting, camera angle. In English only.]
 
 ---VIDEO_PROMPT---
-[10-second video prompt, max 1500 characters. Opening (0-2s), main action (2-7s), closing (7-10s). Camera movements, subject actions, lighting, mood. In English only.]
+[10-second video prompt dalam Bahasa Indonesia, max 1500 karakter. Opening (0-2s), main action (2-7s), closing (7-10s). Sertakan gerakan kamera, aksi subjek, pencahayaan, mood, DAN dialog yang diucapkan. Format: deskripsi visual + dialog dalam tanda kutip.]
 
 Output ONLY the two prompts, nothing else.`,
 
@@ -70,18 +73,21 @@ STYLE: UGC Voiceover
 BRIEF: {brief}
 
 RULES:
-- Image 3 = LOCATION/BACKGROUND. Describe it in extreme detail: wall color, furniture, lighting direction, materials, decorations. This background MUST be the primary setting.
+- Image 3 = LOCATION/BACKGROUND. Describe it in extreme detail. This background MUST be the primary setting.
 - Match the product appearance from Image 1 exactly
 - Match the model appearance from Image 2
 - 16:9 horizontal composition
 - UGC style: lifestyle, influencer aesthetic, warm tones, cinematic feel
+- IMAGE_PROMPT must be in English (for Leonardo AI)
+- VIDEO_PROMPT must be in Bahasa Indonesia (narasi voiceover untuk video)
+- VIDEO_PROMPT: sertakan teks narasi voiceover yang akan dibacakan
 
 OUTPUT FORMAT (strict):
 ---IMAGE_PROMPT---
 [150-250 word image prompt. Start with background description from Image 3, then describe subject, action, product placement, lighting, camera angle. In English only.]
 
 ---VIDEO_PROMPT---
-[10-second video prompt, max 1500 characters. Opening (0-2s), main action (2-7s), closing (7-10s). Camera movements, subject actions, lighting, mood. In English only.]
+[10-second video prompt dalam Bahasa Indonesia, max 1500 karakter. Opening (0-2s), main action (2-7s), closing (7-10s). Sertakan gerakan kamera, aksi subjek, pencahayaan, mood, DAN teks narasi voiceover. Format: deskripsi visual + narasi dalam tanda kutip.]
 
 Output ONLY the two prompts, nothing else.`,
 
@@ -134,13 +140,16 @@ RULES:
 - Match the model appearance from Image 2
 - 16:9 horizontal composition
 - Commercial style: professional, polished, studio-quality, brand-focused
+- IMAGE_PROMPT must be in English (for Leonardo AI)
+- VIDEO_PROMPT must be in Bahasa Indonesia (dialog/narasi untuk video)
+- VIDEO_PROMPT: sertakan dialog profesional yang diucapkan oleh presenter/brand ambassador
 
 OUTPUT FORMAT (strict):
 ---IMAGE_PROMPT---
 [150-250 word image prompt. Start with background description from Image 3, then describe subject, action, expression, lighting, camera angle, product placement. In English only.]
 
 ---VIDEO_PROMPT---
-[10-second video prompt, max 1500 characters. Opening (0-2s), main action (2-7s), closing (7-10s). Cinematic camera movements, professional lighting, brand storytelling. In English only.]
+[10-second video prompt dalam Bahasa Indonesia, max 1500 karakter. Opening (0-2s), main action (2-7s), closing (7-10s). Sertakan gerakan kamera sinematik, pencahayaan profesional, storytelling brand, DAN dialog profesional. Format: deskripsi visual + dialog dalam tanda kutip.]
 
 Output ONLY the two prompts, nothing else.`,
 
@@ -163,13 +172,16 @@ RULES:
 - Match the model appearance from Image 2
 - 16:9 horizontal composition
 - Commercial style: cinematic, high-end, dramatic lighting, aspirational
+- IMAGE_PROMPT must be in English (for Leonardo AI)
+- VIDEO_PROMPT must be in Bahasa Indonesia (narasi voiceover untuk video)
+- VIDEO_PROMPT: sertakan teks narasi voiceover profesional untuk brand
 
 OUTPUT FORMAT (strict):
 ---IMAGE_PROMPT---
 [150-250 word image prompt. Start with background description from Image 3, then describe subject, product hero shot, lighting, camera angle, mood. In English only.]
 
 ---VIDEO_PROMPT---
-[10-second video prompt, max 1500 characters. Opening (0-2s), main action (2-7s), closing (7-10s). Dramatic camera movements, cinematic lighting, premium feel. In English only.]
+[10-second video prompt dalam Bahasa Indonesia, max 1500 karakter. Opening (0-2s), main action (2-7s), closing (7-10s). Sertakan gerakan kamera dramatis, pencahayaan sinematik, mood premium, DAN teks narasi voiceover profesional. Format: deskripsi visual + narasi dalam tanda kutip.]
 
 Output ONLY the two prompts, nothing else.`,
 
