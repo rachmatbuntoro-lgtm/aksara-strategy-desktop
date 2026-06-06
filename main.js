@@ -366,7 +366,7 @@ ipcMain.handle('storyboard-generate', async (_e, data) => {
     // ===== STEP 2: Leonardo → generate storyboard image =====
     log(`[storyboard] Step 2: Leonardo → generate image...`);
     const imageResult = await accounts.makeImage(
-      { prompt: storyboardPrompt, ratio: '9:16', quality: 'HIGH', promptEnhance: false },
+      { prompt: storyboardPrompt, ratio: '16:9', quality: 'HIGH', promptEnhance: false },
       (s, i) => {
         if (s === 'rotate') log(`[storyboard] ${i.reason} — rotasi akun...`);
         else if (s === 'generating') log(`[storyboard] Generating image slot ${i.slot}...`);
@@ -384,12 +384,21 @@ ipcMain.handle('storyboard-generate', async (_e, data) => {
     fs.writeFileSync(storyboardImgPath, imgBuf);
     tmpFiles.push(storyboardImgPath);
 
-    // ===== STEP 3: Gemini → video prompt =====
-    log(`[storyboard] Step 3: Gemini → video prompt...`);
-    const videoPrompt = await gemini.generate(VIDEO_PROMPT_LOCKED, [storyboardImgPath]);
+    // ===== STEP 3: AI → video prompt =====
+    log(`[storyboard] Step 3: AI → video prompt...`);
+    let videoPrompt = '';
+    try {
+      videoPrompt = await gemini.generate(VIDEO_PROMPT_LOCKED, [storyboardImgPath]);
+    } catch (vpErr) {
+      log(`[storyboard] Step 3 FAILED: ${vpErr.message}`);
+      // Fallback: generate basic video prompt without image analysis
+      videoPrompt = `Cinematic video of: ${storyboardPrompt.slice(0, 150)}. Camera slowly pans right, soft natural lighting, shallow depth of field, 8 seconds.`;
+      log(`[storyboard] Step 3 fallback prompt used`);
+    }
 
     if (!videoPrompt || videoPrompt.length < 20) {
-      throw new Error('Video prompt terlalu pendek atau kosong');
+      videoPrompt = `Cinematic video of: ${storyboardPrompt.slice(0, 150)}. Camera slowly pans right, soft natural lighting, shallow depth of field, 8 seconds.`;
+      log(`[storyboard] Step 3 prompt too short, using fallback`);
     }
     log(`[storyboard] Step 3 OK: video prompt ${videoPrompt.length} chars`);
 

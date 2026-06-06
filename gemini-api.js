@@ -215,7 +215,11 @@ class GeminiAPI {
     if (r.ok) {
       const data = await r.json();
       // MiMo returns reasoning_content separately; prefer content
-      const text = data.choices?.[0]?.message?.content || '';
+      const msg = data.choices?.[0]?.message || {};
+      const text = msg.content || msg.reasoning_content || '';
+      if (!msg.content && msg.reasoning_content) {
+        this.log(`[ai-api] WARNING: MiMo returned reasoning_content only, no content`);
+      }
       return text.trim();
     }
 
