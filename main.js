@@ -467,6 +467,46 @@ ipcMain.handle('storyboard-generate', async (_e, data) => {
   }
 });
 
+// ---- PHOTO EDITOR ----
+ipcMain.handle('photo-editor-generate', async (_e, data) => {
+  // data: { prompt, model, ratio, quantity }
+  if (!store.get('leo_uid')) return { ok: false, reason: 'Belum ada akun aktif.' };
+  if (!data.prompt) return { ok: false, reason: 'Prompt kosong' };
+
+  try {
+    log(`[photo-editor] Generate: model=${data.model}, ratio=${data.ratio}, qty=${data.quantity}`);
+    log(`[photo-editor] Prompt: ${data.prompt.slice(0, 100)}...`);
+
+    const result = await accounts.makeImage(
+      { prompt: data.prompt, ratio: data.ratio || '1:1', quality: 'HIGH',
+        promptEnhance: false, model: data.model || 'gpt-image-2',
+        quantity: data.quantity || 1 },
+      (s, i) => {
+        if (s === 'rotate') log(`[photo-editor] ${i.reason} — rotasi akun...`);
+        else if (s === 'generating') log(`[photo-editor] Generating slot ${i.slot}...`);
+      }
+    );
+
+    if (!result || !result.url) throw new Error('Leonardo tidak menghasilkan gambar');
+    log(`[photo-editor] OK: ${result.url}`);
+
+    // Add to queue
+    jobQueue.addCompleted({
+      id: 'pe-' + Date.now(),
+      model: data.model || 'gpt-image-2',
+      status: 'completed',
+      prompt: data.prompt,
+      resultUrl: result.url,
+      createdAt: Date.now(),
+    });
+
+    return { ok: true, url: result.url };
+  } catch (e) {
+    log('[photo-editor] FAILED: ' + e.message);
+    return { ok: false, reason: e.message };
+  }
+});
+
 // ---- CAPTURE MODE ----
 let captureWin = null;
 let captureView = null;

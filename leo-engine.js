@@ -61,6 +61,7 @@ const Q_FEED = `query GetAIGenerationFeed($where: generations_bool_exp = {}, $li
 // ---- Image generation (gpt-image-2) ----
 const IMAGE_MODELS = {
   'gpt-image-2': { id: 'gpt-image-2', ratios: ['16:9', '9:16', '1:1', '2:3'] },
+  'nano-banana': { id: 'nano-banana', ratios: ['16:9', '9:16', '1:1', '2:3'] },
 };
 const IMAGE_COST = { '16:9': 573, '9:16': 573, '1:1': 1033, '2:3': 694 };
 const IMAGE_Q_FEED = `query GetAIGenerationFeed($where: generations_bool_exp = {}, $limit: Int) {
@@ -214,9 +215,11 @@ class LeoEngine {
   // Generate an image. Returns generationId.
   async generateImage(prompt, { ratio = '1:1', quality = 'HIGH', promptEnhance = true,
                                    styleIds = [], publicGen = true, quantity = 1,
-                                   refImageId = null, refStrength = null } = {}) {
-    const spec = IMAGE_MODELS['gpt-image-2'];
-    if (!spec.ratios.includes(ratio)) throw new Error(`gpt-image-2 ratios ${spec.ratios}, got ${ratio}`);
+                                   refImageId = null, refStrength = null,
+                                   model = 'gpt-image-2' } = {}) {
+    const spec = IMAGE_MODELS[model];
+    if (!spec) throw new Error(`Unknown model: ${model}. Available: ${Object.keys(IMAGE_MODELS).join(', ')}`);
+    if (!spec.ratios.includes(ratio)) throw new Error(`${model} ratios ${spec.ratios}, got ${ratio}`);
     const params = {
       prompt,
       ratio,

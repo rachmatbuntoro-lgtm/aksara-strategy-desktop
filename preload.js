@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('webkita', {
   // generate now ENQUEUES a job and returns {ok,id}; progress arrives via onJobs.
   generate: (data) => ipcRenderer.invoke('generate', data),
   storyboardGenerate: (data) => ipcRenderer.invoke('storyboard-generate', data),
+  photoEditorGenerate: (data) => ipcRenderer.invoke('photo-editor-generate', data),
   jobsList: () => ipcRenderer.invoke('jobs-list'),
   jobRetry: (id) => ipcRenderer.invoke('job-retry', id),
   jobRemove: (id) => ipcRenderer.invoke('job-remove', id),

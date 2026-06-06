@@ -29,6 +29,7 @@ import {
   Wand2,
   Zap,
   Copy,
+  Brush,
 } from "lucide-react";
 
 const BRAND = {
@@ -153,6 +154,7 @@ function Sidebar({ active, go, jobs = [], logout, account }) {
   const items = [
     { id: "home", label: "Dashboard", icon: HomeIcon },
     { id: "studio", label: "AI Studio", icon: Layers3 },
+    { id: "photo-editor", label: "Photo Editor", icon: Brush },
     { id: "storyboard", label: "Storyboard", icon: ImagePlus },
     { id: "queue", label: "Queue & Hasil", icon: Film, count: pending },
     { id: "account", label: "Pengaturan Akun", icon: User },
@@ -1069,6 +1071,171 @@ function QueueResultsPage({ go, generateAgain, jobs = [] }) {
   );
 }
 
+function PhotoEditorPage({ go }) {
+  const [prompt, setPrompt] = useState("");
+  const [model, setModel] = useState("gpt-image-2");
+  const [ratio, setRatio] = useState("1:1");
+  const [quantity, setQuantity] = useState(1);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+
+  const models = [
+    { id: "gpt-image-2", label: "GPT Image 2" },
+    { id: "nano-banana", label: "NanoBanana" },
+  ];
+  const ratios = ["2:3", "1:1", "16:9", "9:16"];
+  const quantities = [1, 2, 3, 4];
+
+  const handleGenerate = async () => {
+    if (!prompt.trim()) return;
+    setBusy(true);
+    setError("");
+    setResult(null);
+    try {
+      const res = await window.webkita.photoEditorGenerate({
+        prompt: prompt.trim(),
+        model,
+        ratio,
+        quantity,
+      });
+      if (res.ok) {
+        setResult(res.url);
+      } else {
+        setError(res.reason || "Gagal generate");
+      }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto p-8">
+      <h1 className="text-3xl font-semibold tracking-tight">Photo Editor</h1>
+      <p className="text-white/50 text-sm mt-1">Generate gambar dengan AI — pilih model, rasio, dan jumlah output.</p>
+
+      <div className="mt-8 max-w-2xl space-y-6">
+        {/* Prompt */}
+        <div>
+          <label className="text-sm font-medium text-white/70 mb-2 block">Prompt</label>
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="Deskripsikan gambar yang ingin di-generate..."
+            className="w-full h-32 bg-white/5 border border-white/10 rounded-xl p-4 text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-white/30 transition-colors"
+          />
+        </div>
+
+        {/* Model */}
+        <div>
+          <label className="text-sm font-medium text-white/70 mb-2 block">Model</label>
+          <div className="flex gap-3">
+            {models.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setModel(m.id)}
+                className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  model === m.id
+                    ? "bg-white text-black"
+                    : "bg-white/5 text-white/60 border border-white/10 hover:bg-white/10"
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Ratio */}
+        <div>
+          <label className="text-sm font-medium text-white/70 mb-2 block">Rasio</label>
+          <div className="flex gap-3">
+            {ratios.map((r) => (
+              <button
+                key={r}
+                onClick={() => setRatio(r)}
+                className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  ratio === r
+                    ? "bg-white text-black"
+                    : "bg-white/5 text-white/60 border border-white/10 hover:bg-white/10"
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Quantity */}
+        <div>
+          <label className="text-sm font-medium text-white/70 mb-2 block">Jumlah Output</label>
+          <div className="flex gap-3">
+            {quantities.map((q) => (
+              <button
+                key={q}
+                onClick={() => setQuantity(q)}
+                className={`w-12 h-12 rounded-xl text-sm font-medium transition-all ${
+                  quantity === q
+                    ? "bg-white text-black"
+                    : "bg-white/5 text-white/60 border border-white/10 hover:bg-white/10"
+                }`}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Generate Button */}
+        <button
+          onClick={handleGenerate}
+          disabled={busy || !prompt.trim()}
+          className="w-full py-3.5 rounded-xl font-semibold text-sm bg-white text-black hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+        >
+          {busy ? (
+            <>
+              <Loader2 size={18} className="animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Sparkles size={18} />
+              Generate
+            </>
+          )}
+        </button>
+
+        {/* Error */}
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Result */}
+        {result && (
+          <div className="mt-4">
+            <h2 className="text-lg font-semibold mb-3">Hasil</h2>
+            <div className="rounded-xl overflow-hidden border border-white/10">
+              <img src={result} alt="Generated" className="w-full h-auto" />
+            </div>
+            <a
+              href={result}
+              download
+              className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 hover:text-white text-sm transition-all"
+            >
+              <Download size={16} />
+              Download
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function StoryboardPage({ go, submitStoryboard, studioData, setStudioData, setActiveTool }) {
   const [productImg, setProductImg] = useState(null);
   const [modelImg, setModelImg] = useState(null);
@@ -1650,6 +1817,7 @@ export default function App() {
             submitJob={submitJob}
           />
         )}
+        {screen === "photo-editor" && <PhotoEditorPage key="photo-editor" go={goBottomNav} />}
         {screen === "storyboard" && <StoryboardPage key="storyboard" go={goBottomNav} submitStoryboard={submitStoryboard} studioData={studioData} setStudioData={setStudioData} setActiveTool={setActiveTool} />}
         {screen === "queue" && <QueueResultsPage key="queue" go={goBottomNav} jobs={jobs} generateAgain={() => setScreen("studio")} />}
         {screen === "account" && <AccountPage key="account" go={goBottomNav} account={account} logout={logout} logs={logs} />}

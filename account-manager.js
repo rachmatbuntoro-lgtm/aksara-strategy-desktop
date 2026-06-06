@@ -213,6 +213,8 @@ class AccountManager {
           promptEnhance: job.promptEnhance !== false,
           refImageId: job.refImageId || null,
           refStrength: job.refStrength || null,
+          model: job.model || 'gpt-image-2',
+          quantity: job.quantity || 1,
         });
         return { eng, gid, slot: this._state().active };
       } catch (e) {
