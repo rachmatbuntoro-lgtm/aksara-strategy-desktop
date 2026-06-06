@@ -61,7 +61,7 @@ const Q_FEED = `query GetAIGenerationFeed($where: generations_bool_exp = {}, $li
 // ---- Image generation (gpt-image-2) ----
 const IMAGE_MODELS = {
   'gpt-image-2': { id: 'gpt-image-2', ratios: ['16:9', '9:16', '1:1', '2:3'] },
-  'nano-banana': { id: 'nano-banana', ratios: ['16:9', '9:16', '1:1', '2:3'] },
+  'nano-banana-2': { id: 'nano-banana-2', ratios: ['16:9', '9:16', '1:1', '2:3'] },
 };
 const IMAGE_COST = { '16:9': 573, '9:16': 573, '1:1': 1033, '2:3': 694 };
 const IMAGE_Q_FEED = `query GetAIGenerationFeed($where: generations_bool_exp = {}, $limit: Int) {

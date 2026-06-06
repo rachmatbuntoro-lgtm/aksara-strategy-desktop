@@ -1082,7 +1082,7 @@ function PhotoEditorPage({ go }) {
 
   const models = [
     { id: "gpt-image-2", label: "GPT Image 2" },
-    { id: "nano-banana", label: "NanoBanana" },
+    { id: "nano-banana-2", label: "NanoBanana 2" },
   ];
   const ratios = ["2:3", "1:1", "16:9", "9:16"];
   const quantities = [1, 2, 3, 4];
